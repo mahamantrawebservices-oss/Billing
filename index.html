@@ -39,8 +39,8 @@
                 <h1 class="text-xl font-bold tracking-wide" id="nav-company-name">ProBilling System</h1>
             </div>
             <nav class="flex space-x-2 sm:space-x-4 mt-2 sm:mt-0">
-                <button onclick="switchTab('billing')" id="tab-billing" class="px-4 py-2 rounded-lg font-medium bg-indigo-700 text-white transition hover:bg-indigo-800 flex items-center space-x-2">
-                    <i class="fa-solid fa-file-invoice"></i> <span>New Bill</span>
+                <button onclick="clickNewBillTab()" id="tab-billing" class="px-4 py-2 rounded-lg font-medium bg-emerald-600 text-white transition hover:bg-emerald-700 flex items-center space-x-2 shadow">
+                    <i class="fa-solid fa-file-circle-plus"></i> <span>New Bill</span>
                 </button>
                 <button onclick="switchTab('reports')" id="tab-reports" class="px-4 py-2 rounded-lg font-medium bg-indigo-900 text-indigo-200 transition hover:bg-indigo-800 hover:text-white flex items-center space-x-2">
                     <i class="fa-solid fa-chart-line"></i> <span>Reports</span>
@@ -109,18 +109,18 @@
                     </div>
                     <div>
                         <label class="block text-sm font-semibold text-slate-700 mb-1">Customer Name</label>
-                        <input type="text" id="bill-cust-name" placeholder="Customer Name" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm">
+                        <input type="text" id="bill-cust-name" placeholder="Customer Name" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm" oninput="liveUpdatePreview()">
                     </div>
                     <div>
                         <label class="block text-sm font-semibold text-slate-700 mb-1">Customer Address</label>
-                        <input type="text" id="bill-cust-address" placeholder="Customer Address" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm">
+                        <input type="text" id="bill-cust-address" placeholder="Customer Address" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm" oninput="liveUpdatePreview()">
                     </div>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
                     <div>
                         <label class="block text-sm font-semibold text-slate-700 mb-1">Payment Mode</label>
-                        <select id="bill-pay-mode" onchange="toggleCheckNumber()" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm">
+                        <select id="bill-pay-mode" onchange="toggleCheckNumber(); liveUpdatePreview();" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm">
                             <option value="Cash">Cash</option>
                             <option value="Online">Online / UPI</option>
                             <option value="Cheque">Cheque</option>
@@ -128,11 +128,11 @@
                     </div>
                     <div id="check-number-container" class="hidden">
                         <label class="block text-sm font-semibold text-slate-700 mb-1">Cheque Number</label>
-                        <input type="text" id="bill-check-num" placeholder="Enter Cheque No" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm">
+                        <input type="text" id="bill-check-num" placeholder="Enter Cheque No" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm" oninput="liveUpdatePreview()">
                     </div>
                     <div>
                         <label class="block text-sm font-semibold text-slate-700 mb-1">Signature Option</label>
-                        <select id="bill-sig-option" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm">
+                        <select id="bill-sig-option" onchange="liveUpdatePreview()" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm">
                             <option value="system">This is a system generated bill, signature not required</option>
                             <option value="manual">Manual Signature (For [Company Name])</option>
                         </select>
@@ -167,7 +167,7 @@
                 <div class="flex flex-col md:flex-row justify-between items-start md:items-center pt-4 border-t gap-4">
                     <div class="w-full md:w-1/2">
                         <label class="block text-sm font-semibold text-slate-700 mb-1">Terms & Conditions / Notes</label>
-                        <textarea id="bill-terms" rows="3" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm text-slate-600"></textarea>
+                        <textarea id="bill-terms" rows="3" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm text-slate-600" oninput="liveUpdatePreview()"></textarea>
                     </div>
                     <div class="w-full md:w-1/3 bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2 text-sm">
                         <div class="flex justify-between text-slate-600">
@@ -199,93 +199,98 @@
                 </div>
             </div>
 
-            <!-- PRINTABLE A4 BILL CONTAINER -->
-            <div id="printable-bill" class="hidden bg-white p-8 max-w-[210mm] mx-auto text-slate-800 text-sm">
-                <div class="flex justify-between items-start border-b-2 border-indigo-900 pb-6 mb-6">
-                    <div class="flex items-center space-x-4">
-                        <img id="print-logo" src="" alt="Logo" class="w-20 h-20 object-contain hidden">
+            <!-- LIVE PREVIEW CONTAINER (Always visible below form) -->
+            <div class="mt-8">
+                <h3 class="text-md font-bold text-slate-700 mb-2 flex items-center space-x-2 no-print">
+                    <i class="fa-solid fa-eye text-indigo-600"></i> <span>Live Bill Preview</span>
+                </h3>
+                <div id="printable-bill" class="bg-white p-8 max-w-[210mm] mx-auto text-slate-800 text-sm shadow-lg rounded-xl border border-slate-200">
+                    <div class="flex justify-between items-start border-b-2 border-indigo-900 pb-6 mb-6">
+                        <div class="flex items-center space-x-4">
+                            <img id="print-logo" src="" alt="Logo" class="w-20 h-20 object-contain hidden">
+                            <div>
+                                <h2 id="print-company-name" class="text-2xl font-bold text-indigo-900">Company Name</h2>
+                                <p id="print-company-address" class="text-slate-600 text-xs mt-1">Address line...</p>
+                                <p class="text-slate-600 text-xs mt-0.5">GSTN: <span id="print-company-gst" class="font-semibold"></span> | Mobile: <span id="print-company-mobile" class="font-semibold"></span></p>
+                                <p class="text-slate-600 text-xs">Email: <span id="print-company-email" class="font-semibold"></span></p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <h1 class="text-3xl font-extrabold text-indigo-900 tracking-wider">TAX INVOICE</h1>
+                            <p class="text-xs font-bold text-slate-500 mt-1">Invoice No: <span id="print-bill-no" class="text-indigo-600"></span></p>
+                            <p class="text-xs text-slate-500">Date: <span id="print-bill-date" class="font-semibold"></span></p>
+                            <p class="text-xs text-slate-500">Payment Mode: <span id="print-pay-mode" class="font-semibold"></span> <span id="print-check-container" class="hidden">(Cheque No: <span id="print-check-no"></span>)</span></p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-6 mb-6 bg-slate-50 p-4 rounded-lg border border-slate-200">
                         <div>
-                            <h2 id="print-company-name" class="text-2xl font-bold text-indigo-900">Company Name</h2>
-                            <p id="print-company-address" class="text-slate-600 text-xs mt-1">Address line...</p>
-                            <p class="text-slate-600 text-xs mt-0.5">GSTN: <span id="print-company-gst" class="font-semibold"></span> | Mobile: <span id="print-company-mobile" class="font-semibold"></span></p>
-                            <p class="text-slate-600 text-xs">Email: <span id="print-company-email" class="font-semibold"></span></p>
+                            <h3 class="text-xs font-bold uppercase text-slate-500 mb-1">Billed To:</h3>
+                            <p id="print-cust-name" class="font-bold text-slate-800 text-base"></p>
+                            <p id="print-cust-address" class="text-slate-600 text-xs mt-0.5"></p>
+                        </div>
+                        <div class="text-right">
+                            <h3 class="text-xs font-bold uppercase text-slate-500 mb-1">Financial Year:</h3>
+                            <p id="print-fin-year" class="font-bold text-slate-800"></p>
                         </div>
                     </div>
-                    <div class="text-right">
-                        <h1 class="text-3xl font-extrabold text-indigo-900 tracking-wider">TAX INVOICE</h1>
-                        <p class="text-xs font-bold text-slate-500 mt-1">Invoice No: <span id="print-bill-no" class="text-indigo-600"></span></p>
-                        <p class="text-xs text-slate-500">Date: <span id="print-bill-date" class="font-semibold"></span></p>
-                        <p class="text-xs text-slate-500">Payment Mode: <span id="print-pay-mode" class="font-semibold"></span> <span id="print-check-container" class="hidden">(Cheque No: <span id="print-check-no"></span>)</span></p>
-                    </div>
-                </div>
 
-                <div class="grid grid-cols-2 gap-6 mb-6 bg-slate-50 p-4 rounded-lg border border-slate-200">
-                    <div>
-                        <h3 class="text-xs font-bold uppercase text-slate-500 mb-1">Billed To:</h3>
-                        <p id="print-cust-name" class="font-bold text-slate-800 text-base"></p>
-                        <p id="print-cust-address" class="text-slate-600 text-xs mt-0.5"></p>
-                    </div>
-                    <div class="text-right">
-                        <h3 class="text-xs font-bold uppercase text-slate-500 mb-1">Financial Year:</h3>
-                        <p id="print-fin-year" class="font-bold text-slate-800"></p>
-                    </div>
-                </div>
+                    <table class="w-full text-left border-collapse mb-6">
+                        <thead>
+                            <tr class="bg-indigo-900 text-white text-xs uppercase font-semibold">
+                                <th class="p-2.5 text-center w-10">Sr</th>
+                                <th class="p-2.5">Item Description</th>
+                                <th class="p-2.5 text-center w-20">Qty</th>
+                                <th class="p-2.5 text-center w-20">Unit</th>
+                                <th class="p-2.5 text-right w-24">Rate (₹)</th>
+                                <th class="p-2.5 text-center w-16">GST</th>
+                                <th class="p-2.5 text-right w-28">Amount (₹)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="print-items-body" class="divide-y divide-slate-200 text-xs">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
 
-                <table class="w-full text-left border-collapse mb-6">
-                    <thead>
-                        <tr class="bg-indigo-900 text-white text-xs uppercase font-semibold">
-                            <th class="p-2.5 text-center w-10">Sr</th>
-                            <th class="p-2.5">Item Description</th>
-                            <th class="p-2.5 text-center w-20">Qty</th>
-                            <th class="p-2.5 text-center w-20">Unit</th>
-                            <th class="p-2.5 text-right w-24">Rate (₹)</th>
-                            <th class="p-2.5 text-center w-16">GST</th>
-                            <th class="p-2.5 text-right w-28">Amount (₹)</th>
-                        </tr>
-                    </thead>
-                    <tbody id="print-items-body" class="divide-y divide-slate-200 text-xs">
-                        <!-- Populated dynamically -->
-                    </tbody>
-                </table>
+                    <div class="flex justify-between items-start border-t pt-4 mb-8">
+                        <div class="w-1/2 pr-4">
+                            <h4 class="font-bold text-xs uppercase text-slate-700 mb-1">Terms & Conditions:</h4>
+                            <p id="print-terms" class="text-slate-600 text-xs whitespace-pre-line leading-relaxed"></p>
+                            
+                            <div class="mt-4 border p-2.5 rounded bg-slate-50 text-[11px]">
+                                <p class="font-bold text-slate-700">GST Breakdown:</p>
+                                <div id="print-gst-breakdown" class="text-slate-600 mt-1"></div>
+                            </div>
+                        </div>
+                        <div class="w-2/5 space-y-1.5 text-xs">
+                            <div class="flex justify-between text-slate-600">
+                                <span>Subtotal:</span>
+                                <span id="print-subtotal" class="font-semibold"></span>
+                            </div>
+                            <div class="flex justify-between text-slate-600">
+                                <span>GST Total:</span>
+                                <span id="print-gst" class="font-semibold"></span>
+                            </div>
+                            <div class="flex justify-between text-slate-600">
+                                <span>Roundoff:</span>
+                                <span id="print-round" class="font-semibold"></span>
+                            </div>
+                            <div class="flex justify-between text-sm font-bold text-indigo-900 border-t pt-2">
+                                <span>Grand Total:</span>
+                                <span id="print-grand"></span>
+                            </div>
+                        </div>
+                    </div>
 
-                <div class="flex justify-between items-start border-t pt-4 mb-8">
-                    <div class="w-1/2 pr-4">
-                        <h4 class="font-bold text-xs uppercase text-slate-700 mb-1">Terms & Conditions:</h4>
-                        <p id="print-terms" class="text-slate-600 text-xs whitespace-pre-line leading-relaxed"></p>
-                        
-                        <div class="mt-4 border p-2.5 rounded bg-slate-50 text-[11px]">
-                            <p class="font-bold text-slate-700">GST Breakdown:</p>
-                            <div id="print-gst-breakdown" class="text-slate-600 mt-1"></div>
+                    <div class="mt-12 pt-6 border-t flex justify-between items-end">
+                        <div>
+                            <p id="print-sig-system" class="text-xs italic text-slate-500">This is a system generated bill, signature not required.</p>
                         </div>
-                    </div>
-                    <div class="w-2/5 space-y-1.5 text-xs">
-                        <div class="flex justify-between text-slate-600">
-                            <span>Subtotal:</span>
-                            <span id="print-subtotal" class="font-semibold"></span>
+                        <div id="print-sig-manual" class="hidden text-center">
+                            <div class="h-16 mb-1"></div>
+                            <p class="text-xs font-bold text-slate-800 border-t pt-1 px-4">For <span id="print-sig-company"></span></p>
+                            <p class="text-[10px] text-slate-500 mt-0.5">Authorised Signatory</p>
                         </div>
-                        <div class="flex justify-between text-slate-600">
-                            <span>GST Total:</span>
-                            <span id="print-gst" class="font-semibold"></span>
-                        </div>
-                        <div class="flex justify-between text-slate-600">
-                            <span>Roundoff:</span>
-                            <span id="print-round" class="font-semibold"></span>
-                        </div>
-                        <div class="flex justify-between text-sm font-bold text-indigo-900 border-t pt-2">
-                            <span>Grand Total:</span>
-                            <span id="print-grand"></span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="mt-12 pt-6 border-t flex justify-between items-end">
-                    <div>
-                        <p id="print-sig-system" class="text-xs italic text-slate-500">This is a system generated bill, signature not required.</p>
-                    </div>
-                    <div id="print-sig-manual" class="hidden text-center">
-                        <div class="h-16 mb-1"></div>
-                        <p class="text-xs font-bold text-slate-800 border-t pt-1 px-4">For <span id="print-sig-company"></span></p>
-                        <p class="text-[10px] text-slate-500 mt-0.5">Authorised Signatory</p>
                     </div>
                 </div>
             </div>
@@ -656,16 +661,30 @@
 
             ['billing', 'reports', 'settings'].forEach(t => {
                 const btn = document.getElementById(`tab-${t}`);
+                if (!btn) return;
                 if (t === tabId) {
-                    btn.className = "px-4 py-2 rounded-lg font-medium bg-indigo-700 text-white transition hover:bg-indigo-800 flex items-center space-x-2";
+                    if (t === 'billing') {
+                        btn.className = "px-4 py-2 rounded-lg font-medium bg-emerald-600 text-white transition hover:bg-emerald-700 flex items-center space-x-2 shadow";
+                    } else {
+                        btn.className = "px-4 py-2 rounded-lg font-medium bg-indigo-700 text-white transition hover:bg-indigo-800 flex items-center space-x-2";
+                    }
                 } else {
-                    btn.className = "px-4 py-2 rounded-lg font-medium bg-indigo-900 text-indigo-200 transition hover:bg-indigo-800 hover:text-white flex items-center space-x-2";
+                    if (t === 'billing') {
+                        btn.className = "px-4 py-2 rounded-lg font-medium bg-indigo-900 text-indigo-200 transition hover:bg-indigo-800 hover:text-white flex items-center space-x-2";
+                    } else {
+                        btn.className = "px-4 py-2 rounded-lg font-medium bg-indigo-900 text-indigo-200 transition hover:bg-indigo-800 hover:text-white flex items-center space-x-2";
+                    }
                 }
             });
 
             if (tabId === 'billing' && !document.getElementById('editing-bill-id').value) {
                 initBillingForm();
             }
+        }
+
+        function clickNewBillTab() {
+            resetBillingForm();
+            switchTab('billing');
         }
 
         function initBillingForm() {
@@ -692,6 +711,8 @@
 
             if (document.getElementById('invoice-items-body').rows.length === 0) {
                 addInvoiceRow();
+            } else {
+                liveUpdatePreview();
             }
         }
 
@@ -740,12 +761,43 @@
             switchTab('billing');
         }
 
+        function openBillInBillingTab(billId) {
+            const bill = appData.bills.find(b => b.id === billId);
+            if (!bill) return alert('Bill not found!');
+            
+            document.getElementById('editing-bill-id').value = bill.id;
+            document.getElementById('form-mode-title').innerText = `Edit Invoice (${bill.billNumber})`;
+            document.getElementById('save-btn-text').innerText = "Update Bill";
+            document.getElementById('cancel-edit-btn').classList.remove('hidden');
+
+            document.getElementById('bill-fin-year').value = bill.finYear;
+            document.getElementById('bill-number').value = bill.billNumber;
+            document.getElementById('bill-date').value = bill.date;
+            document.getElementById('bill-cust-name').value = bill.customerName;
+            document.getElementById('bill-cust-address').value = bill.customerAddress;
+            document.getElementById('bill-pay-mode').value = bill.paymentMode;
+            document.getElementById('bill-check-num').value = bill.checkNumber || '';
+            document.getElementById('bill-sig-option').value = bill.signatureOption || 'system';
+            document.getElementById('bill-terms').value = bill.terms;
+
+            toggleCheckNumber();
+
+            const tbody = document.getElementById('invoice-items-body');
+            tbody.innerHTML = '';
+            bill.items.forEach(item => {
+                addInvoiceRow(item);
+            });
+
+            switchTab('billing');
+        }
+
         function onCustomerSelect() {
             const id = document.getElementById('bill-customer-select').value;
             const cust = appData.customers.find(c => c.id === id);
             if (cust) {
                 document.getElementById('bill-cust-name').value = cust.name;
                 document.getElementById('bill-cust-address').value = cust.address;
+                liveUpdatePreview();
             }
         }
 
@@ -777,19 +829,19 @@
                     <select onchange="onItemRowSelect(this)" class="item-select w-full border border-slate-300 rounded p-1.5 text-sm mb-1">
                         ${itemOptions}
                     </select>
-                    <input type="text" value="${itemData ? itemData.name : ''}" placeholder="Item description / ગુજરાતીમાં" class="item-name w-full border border-slate-300 rounded p-1.5 text-sm">
+                    <input type="text" value="${itemData ? itemData.name : ''}" placeholder="Item description / ગુજરાતીમાં" class="item-name w-full border border-slate-300 rounded p-1.5 text-sm" oninput="liveUpdatePreview()">
                 </td>
                 <td class="p-3">
-                    <input type="number" step="0.001" value="${itemData ? itemData.qty : 1}" oninput="calculateTotals()" class="item-qty w-full border border-slate-300 rounded p-1.5 text-sm">
+                    <input type="number" step="0.001" value="${itemData ? itemData.qty : 1}" oninput="calculateTotals(); liveUpdatePreview();" class="item-qty w-full border border-slate-300 rounded p-1.5 text-sm">
                 </td>
                 <td class="p-3">
-                    <input type="text" value="${itemData ? itemData.unit : 'Kg'}" placeholder="Unit" class="item-unit w-full border border-slate-300 rounded p-1.5 text-sm">
+                    <input type="text" value="${itemData ? itemData.unit : 'Kg'}" placeholder="Unit" class="item-unit w-full border border-slate-300 rounded p-1.5 text-sm" oninput="liveUpdatePreview()">
                 </td>
                 <td class="p-3">
-                    <input type="number" step="0.01" value="${itemData ? itemData.rate : 0}" oninput="calculateTotals()" class="item-rate w-full border border-slate-300 rounded p-1.5 text-sm">
+                    <input type="number" step="0.01" value="${itemData ? itemData.rate : 0}" oninput="calculateTotals(); liveUpdatePreview();" class="item-rate w-full border border-slate-300 rounded p-1.5 text-sm">
                 </td>
                 <td class="p-3">
-                    <input type="number" step="0.01" value="${itemData ? itemData.gst : 5}" oninput="calculateTotals()" class="item-gst w-full border border-slate-300 rounded p-1.5 text-sm">
+                    <input type="number" step="0.01" value="${itemData ? itemData.gst : 5}" oninput="calculateTotals(); liveUpdatePreview();" class="item-gst w-full border border-slate-300 rounded p-1.5 text-sm">
                 </td>
                 <td class="p-3 text-right font-semibold item-amount">₹0.00</td>
                 <td class="p-3 text-center">
@@ -797,6 +849,7 @@
                 </td>
             `;
             calculateTotals();
+            liveUpdatePreview();
         }
 
         function onItemRowSelect(selectEl) {
@@ -809,6 +862,7 @@
                 row.querySelector('.item-rate').value = item.rate;
                 row.querySelector('.item-gst').value = item.gst;
                 calculateTotals();
+                liveUpdatePreview();
             }
         }
 
@@ -817,6 +871,7 @@
             row.remove();
             reorderRows();
             calculateTotals();
+            liveUpdatePreview();
         }
 
         function reorderRows() {
@@ -896,41 +951,12 @@
             };
         }
 
-        function saveBill() {
+        function liveUpdatePreview() {
             const bill = collectBillObject();
-            const editingId = document.getElementById('editing-bill-id').value;
-            
-            if (editingId) {
-                const index = appData.bills.findIndex(b => b.id === editingId);
-                if (index !== -1) {
-                    appData.bills[index] = bill;
-                } else {
-                    appData.bills.push(bill);
-                }
-                alert('Bill updated successfully!');
-            } else {
-                appData.bills.push(bill);
-                alert('Bill saved successfully!');
-            }
-            saveLocalStorage();
-            resetBillingForm();
+            fillPreviewContainer(bill);
         }
 
-        function printBillById(billId) {
-            const bill = appData.bills.find(b => b.id === billId);
-            if (!bill) return alert('Bill not found!');
-            fillAndPrintBillObject(bill);
-        }
-
-        function printBill() {
-            const bill = collectBillObject();
-            fillAndPrintBillObject(bill);
-        }
-
-        function fillAndPrintBillObject(bill) {
-            document.getElementById('printable-report').classList.add('hidden');
-            document.getElementById('printable-bill').classList.remove('hidden');
-
+        function fillPreviewContainer(bill) {
             document.getElementById('print-company-name').innerText = appData.company.name;
             document.getElementById('print-company-address').innerText = appData.company.address;
             document.getElementById('print-company-gst').innerText = appData.company.gstn;
@@ -996,7 +1022,30 @@
                 document.getElementById('print-sig-manual').classList.remove('hidden');
                 document.getElementById('print-sig-company').innerText = appData.company.name;
             }
+        }
 
+        function saveBill() {
+            const bill = collectBillObject();
+            const editingId = document.getElementById('editing-bill-id').value;
+            
+            if (editingId) {
+                const index = appData.bills.findIndex(b => b.id === editingId);
+                if (index !== -1) {
+                    appData.bills[index] = bill;
+                } else {
+                    appData.bills.push(bill);
+                }
+                alert('Bill updated successfully! Data is retained so you can print it now.');
+            } else {
+                appData.bills.push(bill);
+                alert('Bill saved successfully! Data is retained so you can print it now.');
+            }
+            saveLocalStorage();
+            liveUpdatePreview();
+        }
+
+        function printBill() {
+            liveUpdatePreview();
             window.print();
         }
 
@@ -1032,6 +1081,7 @@
             appData.company.logo = document.getElementById('set-comp-logo').value;
             saveLocalStorage();
             alert('Company profile updated successfully!');
+            liveUpdatePreview();
         }
 
         function saveDefaultTerms() {
@@ -1045,6 +1095,7 @@
             const reader = new FileReader();
             reader.onloadend = function() {
                 document.getElementById('set-comp-logo').value = reader.result;
+                liveUpdatePreview();
             }
             if (file) reader.readAsDataURL(file);
         }
@@ -1111,6 +1162,7 @@
             document.getElementById('master-cust-addr').value = '';
             saveLocalStorage();
             renderMasterCustomerTable();
+            initBillingForm();
         }
 
         function deleteCustomer(id) {
@@ -1244,7 +1296,7 @@
                             <td class="p-3 text-right">₹${b.gstTotal.toFixed(2)}</td>
                             <td class="p-3 text-right font-bold">₹${b.grandTotal.toFixed(2)}</td>
                             <td class="p-3 text-center space-x-2">
-                                <button onclick="printBillById('${b.id}')" class="text-indigo-600 hover:text-indigo-800" title="Print Bill"><i class="fa-solid fa-print"></i></button>
+                                <button onclick="openBillInBillingTab('${b.id}')" class="text-indigo-600 hover:text-indigo-800" title="Open/Print Bill"><i class="fa-solid fa-file-invoice"></i></button>
                                 <button onclick="loadBillForEditing('${b.billNumber}')" class="text-emerald-600 hover:text-emerald-800" title="Edit Bill"><i class="fa-solid fa-pen-to-square"></i></button>
                             </td>
                         </tr>
@@ -1278,9 +1330,13 @@
 
         function downloadReportPDF() {
             if (lastGeneratedReportBills.length === 0) return alert('Please generate a report first.');
-            document.getElementById('printable-bill').classList.add('hidden');
-            document.getElementById('printable-report').classList.remove('hidden');
+            // Toggle visibility for report printing
+            document.getElementById('section-reports').classList.add('hidden');
+            const repPrintDiv = document.getElementById('printable-report');
+            repPrintDiv.classList.remove('hidden');
             window.print();
+            repPrintDiv.classList.add('hidden');
+            document.getElementById('section-reports').classList.remove('hidden');
         }
 
         window.onload = function() {
