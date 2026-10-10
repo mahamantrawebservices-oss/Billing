@@ -20,10 +20,10 @@
         @media print {
             body * { visibility: hidden !important; }
             #printable-bill, #printable-bill * { visibility: visible !important; }
-            #printable-bill { position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 10mm; background: white; box-shadow: none; z-index: 99999; }
+            #printable-bill { position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 10mm; background: white; box-shadow: none; z-index: 99999; display: block !important; }
             
             #printable-report, #printable-report * { visibility: visible !important; }
-            #printable-report { position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 10mm; background: white; box-shadow: none; z-index: 99999; }
+            #printable-report { position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 10mm; background: white; box-shadow: none; z-index: 99999; display: block !important; }
             
             .no-print { display: none !important; }
         }
@@ -300,7 +300,7 @@
                         <span>Sales & GST Reports</span>
                     </h2>
                     <button onclick="downloadReportPDF()" id="pdf-download-btn" class="hidden bg-rose-600 hover:bg-rose-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition flex items-center space-x-2 shadow">
-                        <i class="fa-solid fa-file-pdf"></i> <span>Download PDF Report</span>
+                        <i class="fa-solid fa-print"></i> <span>Print / Save PDF Report</span>
                     </button>
                 </div>
 
@@ -928,6 +928,9 @@
         }
 
         function fillAndPrintBillObject(bill) {
+            document.getElementById('printable-report').classList.add('hidden');
+            document.getElementById('printable-bill').classList.remove('hidden');
+
             document.getElementById('print-company-name').innerText = appData.company.name;
             document.getElementById('print-company-address').innerText = appData.company.address;
             document.getElementById('print-company-gst').innerText = appData.company.gstn;
@@ -1275,6 +1278,8 @@
 
         function downloadReportPDF() {
             if (lastGeneratedReportBills.length === 0) return alert('Please generate a report first.');
+            document.getElementById('printable-bill').classList.add('hidden');
+            document.getElementById('printable-report').classList.remove('hidden');
             window.print();
         }
 
