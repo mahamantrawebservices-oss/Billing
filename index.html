@@ -542,9 +542,7 @@
                 { id: "i2", name: "Cement Bag (50 Kg)", rate: 380, gst: 28 },
                 { id: "i3", name: "મગફળી તેલ / Groundnut Oil (1 Ltr)", rate: 160, gst: 5 }
             ],
-            defaultTerms: "1. Goods once sold will not be taken back.
-2. Subject to Ahmedabad Jurisdiction.
-3. Interest @ 18% p.a. will be charged if bill not paid on time.",
+            defaultTerms: "1. Goods once sold will not be taken back.\n2. Subject to Ahmedabad Jurisdiction.\n3. Interest @ 18% p.a. will be charged if bill not paid on time.",
             bills: []
         };
 
@@ -1024,7 +1022,7 @@
                             <td class="p-3 font-medium">${b.customerName}</td>
                             <td class="p-3">${b.paymentMode}</td>
                             <td class="p-3 text-right">₹${b.subtotal.toFixed(2)}</td>
-                            <td class="p-3 text-right">₹${b.gstTotal.dispose ? '' : b.gstTotal.toFixed(2)}</td>
+                            <td class="p-3 text-right">₹${b.gstTotal.toFixed(2)}</td>
                             <td class="p-3 text-right font-bold">₹${b.grandTotal.toFixed(2)}</td>
                         </tr>
                     `;
@@ -1060,4 +1058,3 @@
     </script>
 </body>
 </html>
-
