@@ -3,57 +3,177 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mahamantra Web Services - Admin Panel</title>
+    <title>Mahamantra Web Services - Professional Billing System</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Firebase SDK -->
+    <!-- Firebase SDK (Modular CDN) -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, getDocs, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-        window.FirebaseSDK = { initializeApp, getFirestore, collection, getDocs, doc, setDoc };
+        import { getFirestore, collection, addDoc, getDocs, doc, setDoc, deleteDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        window.FirebaseSDK = { initializeApp, getFirestore, collection, addDoc, getDocs, doc, setDoc, deleteDoc, getDoc };
     </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        @media print {
+            body * { visibility: hidden !important; }
+            #printable-bill, #printable-bill * { visibility: visible !important; }
+            #printable-bill { position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 10mm; background: white; z-index: 99999; display: block !important; }
+            .no-print { display: none !important; }
+        }
+    </style>
 </head>
 <body class="bg-slate-100 text-slate-800 antialiased min-h-screen flex flex-col">
 
-    <!-- ADMIN LOGIN MODAL -->
-    <div id="admin-login-modal" class="fixed inset-0 bg-indigo-950 z-50 flex items-center justify-center">
+    <!-- LOGIN MODAL -->
+    <div id="login-modal" class="fixed inset-0 bg-black bg-opacity-70 z-40 flex items-center justify-center">
         <div class="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl space-y-6">
             <div class="text-center">
-                <i class="fa-solid fa-user-shield text-5xl text-indigo-600 mb-2"></i>
-                <h2 class="text-2xl font-bold text-slate-900">Admin Panel Login</h2>
+                <i class="fa-solid fa-shield-halved text-4xl text-indigo-600 mb-2"></i>
+                <h2 class="text-2xl font-bold text-slate-900">User Login</h2>
+                <p class="text-xs text-slate-500 mt-1">Mahamantra Web Services (Firebase Connected)</p>
             </div>
-            <div class="space-y-4">
-                <input type="password" id="admin-login-pass" placeholder="Enter Developer Password" class="w-full border rounded-lg p-3 text-sm">
-                <button onclick="verifyAdminLogin()" class="w-full bg-indigo-600 text-white py-3 rounded-lg font-bold text-sm">Login</button>
+            
+            <div id="login-form-box" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">User ID</label>
+                    <input type="text" id="login-userid" placeholder="Enter ID" class="w-full border rounded-lg p-3 text-sm focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Password</label>
+                    <input type="password" id="login-pass" placeholder="Enter Password" class="w-full border rounded-lg p-3 text-sm focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <button onclick="handleUserLogin()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-lg font-bold text-sm transition shadow-md">Login to System</button>
+                <div class="flex justify-between items-center text-xs pt-2">
+                    <button onclick="showRegisterSection()" class="text-indigo-600 hover:underline font-semibold">New User? Register</button>
+                    <button onclick="showPasskeySection()" class="text-indigo-600 hover:underline font-semibold">Reset Password via Passkey</button>
+                </div>
+            </div>
+
+            <!-- REGISTER SECTION -->
+            <div id="register-form-box" class="space-y-4 hidden">
+                <div class="bg-indigo-50 p-3 rounded-lg border border-indigo-200 text-xs text-indigo-800">
+                    <p class="font-bold mb-0.5"><i class="fa-solid fa-circle-info"></i> Account Registration</p>
+                    Admin approval is required before you can login.
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">User ID</label>
+                    <input type="text" id="reg-userid" placeholder="Enter User ID" class="w-full border rounded-lg p-2.5 text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Email Address</label>
+                    <input type="email" id="reg-email" placeholder="Enter Email for Passkey" class="w-full border rounded-lg p-2.5 text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Password</label>
+                    <input type="password" id="reg-pass" placeholder="Enter Password" class="w-full border rounded-lg p-2.5 text-sm">
+                </div>
+                <div class="flex space-x-2">
+                    <button onclick="handleRegisterUser()" class="flex-1 bg-emerald-600 text-white py-2.5 rounded-lg font-bold text-sm">Submit Registration</button>
+                    <button onclick="hideRegisterSection()" class="bg-slate-200 text-slate-700 px-4 rounded-lg text-sm font-semibold">Cancel</button>
+                </div>
+            </div>
+
+            <!-- PASSKEY RESET SECTION -->
+            <div id="passkey-form-box" class="space-y-4 hidden">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">User ID</label>
+                    <input type="text" id="pk-userid" placeholder="Enter User ID" class="w-full border rounded-lg p-2.5 text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Passkey (from Admin Email)</label>
+                    <input type="text" id="pk-passkey" placeholder="Enter Passkey" class="w-full border rounded-lg p-2.5 text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">New Password</label>
+                    <input type="password" id="pk-newpass" placeholder="Enter New Password" class="w-full border rounded-lg p-2.5 text-sm">
+                </div>
+                <div class="flex space-x-2">
+                    <button onclick="handleResetWithPasskey()" class="flex-1 bg-amber-600 text-white py-2.5 rounded-lg font-bold text-sm">Update Password</button>
+                    <button onclick="hidePasskeySection()" class="bg-slate-200 text-slate-700 px-4 rounded-lg text-sm font-semibold">Cancel</button>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- ADMIN CONTENT -->
-    <main class="flex-grow max-w-7xl w-full mx-auto px-4 py-6 space-y-6">
-        <div class="bg-white rounded-xl shadow-md p-6">
-            <h3 class="text-xl font-bold mb-4">Cloud User Management & Login History</h3>
-            <div class="overflow-x-auto mb-6">
-                <table class="w-full text-left border-collapse text-sm">
+    <!-- Header -->
+    <header class="bg-indigo-900 text-white shadow-md sticky top-0 z-30 no-print">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+            <h1 class="text-xl font-bold" id="nav-company-name">Mahamantra Web Services</h1>
+            <nav class="flex space-x-4 items-center">
+                <button onclick="switchTab('billing')" id="tab-billing" class="px-4 py-2 rounded-lg font-medium bg-emerald-600 text-white">New Bill</button>
+                <button onclick="switchTab('reports')" id="tab-reports" class="px-4 py-2 rounded-lg font-medium hover:bg-indigo-800">Reports</button>
+                <button onclick="switchTab('settings')" id="tab-settings" class="px-4 py-2 rounded-lg font-medium hover:bg-indigo-800">Settings</button>
+                <button onclick="logoutUser()" class="px-3 py-2 rounded-lg bg-rose-600 text-white text-sm" title="Logout"><i class="fa-solid fa-power-off"></i></button>
+            </nav>
+        </div>
+    </header>
+
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 py-6">
+        <!-- BILLING SECTION -->
+        <section id="section-billing" class="tab-content space-y-6">
+            <div class="bg-white rounded-xl shadow-md p-6 no-print">
+                <div class="flex justify-between items-center border-b pb-4 mb-6">
+                    <h2 class="text-xl font-bold text-slate-800">Generate Invoice</h2>
+                    <div class="flex space-x-4">
+                        <input type="text" id="bill-number" class="bg-slate-100 border rounded px-3 py-1.5 text-sm font-bold text-indigo-600 w-32" readonly>
+                        <input type="date" id="bill-date" class="border rounded px-3 py-1.5 text-sm">
+                    </div>
+                </div>
+                <!-- Customer & Items Setup -->
+                <div class="grid grid-cols-3 gap-4 mb-4">
+                    <input type="text" id="bill-cust-name" placeholder="Customer Name" class="border p-2.5 rounded text-sm" oninput="liveUpdatePreview()">
+                    <input type="text" id="bill-cust-address" placeholder="Customer Address" class="border p-2.5 rounded text-sm" oninput="liveUpdatePreview()">
+                    <select id="bill-pay-mode" class="border p-2.5 rounded text-sm"><option value="Cash">Cash</option><option value="Online">Online</option><option value="Cheque">Cheque</option></select>
+                </div>
+                <!-- Items Table -->
+                <table class="w-full text-left border-collapse mb-4" id="invoice-items-table">
                     <thead>
-                        <tr class="bg-slate-100 uppercase text-xs border-b">
-                            <th class="p-3">User ID</th><th class="p-3">Email</th><th class="p-3">Status</th><th class="p-3">Passkey</th><th class="p-3 text-center">Actions</th>
+                        <tr class="bg-slate-100 text-xs uppercase border-b">
+                            <th class="p-2">Item</th><th class="p-2">Qty</th><th class="p-2">Rate</th><th class="p-2 text-right">Amount</th><th class="p-2 text-center">Action</th>
                         </tr>
                     </thead>
-                    <tbody id="admin-users-table" class="divide-y"></tbody>
+                    <tbody id="invoice-items-body" class="text-sm divide-y"></tbody>
                 </table>
+                <button onclick="addInvoiceRow()" class="bg-indigo-50 text-indigo-700 px-4 py-2 rounded text-sm font-semibold mb-4">+ Add Item</button>
+                <div class="flex justify-between border-t pt-4">
+                    <span class="text-lg font-bold">Grand Total: <span id="summary-grand" class="text-indigo-600">₹0.00</span></span>
+                    <button onclick="saveBillToFirebase()" class="bg-emerald-600 text-white px-6 py-2.5 rounded font-bold text-sm">Save Bill to Cloud</button>
+                </div>
             </div>
 
-            <h4 class="font-bold text-sm mb-2">Recent 5 Login Sessions</h4>
-            <table class="w-full text-left border-collapse text-sm">
-                <thead><tr class="bg-slate-100 uppercase text-xs border-b"><th class="p-3">User ID</th><th class="p-3">Time</th><th class="p-3">Device</th></tr></thead>
-                <tbody id="admin-login-history-table" class="divide-y"></tbody>
-            </table>
-        </div>
+            <!-- LIVE PREVIEW -->
+            <div id="printable-bill" class="bg-white p-8 max-w-[210mm] mx-auto shadow-lg rounded-xl border">
+                <h2 class="text-2xl font-bold text-indigo-900" id="print-company-name">Company Name</h2>
+                <p class="text-xs text-slate-600" id="print-company-address"></p>
+                <hr class="my-4">
+                <p><strong>Customer:</strong> <span id="print-cust-name"></span></p>
+                <p><strong>Grand Total:</strong> <span id="print-grand">₹0.00</span></p>
+            </div>
+        </section>
+
+        <!-- REPORTS SECTION -->
+        <section id="section-reports" class="tab-content hidden space-y-6">
+            <div class="bg-white rounded-xl shadow-md p-6">
+                <h2 class="text-xl font-bold mb-4">Saved Bills from Cloud</h2>
+                <div id="reports-list" class="space-y-2 text-sm"></div>
+            </div>
+        </section>
+
+        <!-- SETTINGS SECTION -->
+        <section id="section-settings" class="tab-content hidden space-y-6">
+            <div class="bg-white rounded-xl shadow-md p-6 space-y-4">
+                <h3 class="text-lg font-bold">Company Profile</h3>
+                <input type="text" id="set-comp-name" placeholder="Company Name" class="w-full border p-2 rounded text-sm">
+                <input type="text" id="set-comp-address" placeholder="Address" class="w-full border p-2 rounded text-sm">
+                <button onclick="saveCompanyProfile()" class="bg-indigo-600 text-white px-4 py-2 rounded text-sm">Save Profile</button>
+            </div>
+        </section>
     </main>
 
     <script type="module">
-const firebaseConfig = {
+        // Firebase Config (Replace with your Firebase Project Credentials)
+       const firebaseConfig = {
   apiKey: "AIzaSyBmglc-sNRtEfTh8yg7WGgUBWq1Ejdf04c",
   authDomain: "probilling-app-admin.firebaseapp.com",
   projectId: "probilling-app-admin",
@@ -62,51 +182,121 @@ const firebaseConfig = {
   appId: "1:806696935154:web:96f76acf22f6768deb3a6b",
   measurementId: "G-5YRX2NVRHC"
 };
-        const app = window.FirebaseSDK.initializeApp(firebaseConfig);
-        const db = window.FirebaseSDK.getFirestore(app);
 
-        window.verifyAdminLogin = function() {
-            const pass = document.getElementById('admin-login-pass').value.trim();
-            if(pass === "admin123") { // Default password
-                document.getElementById('admin-login-modal').classList.add('hidden');
-                loadAdminData();
-            } else {
-                alert('Incorrect Developer Password!');
-            }
-        };
+        let db;
+        try {
+            const app = window.FirebaseSDK.initializeApp(firebaseConfig);
+            db = window.FirebaseSDK.getFirestore(app);
+            window.dbInstance = db;
+        } catch(e) { console.error("Firebase init error:", e); }
 
-        async function loadAdminData() {
-            // Load Users
-            const usersSnap = await window.FirebaseSDK.getDocs(window.FirebaseSDK.collection(db, "users"));
-            const tbody = document.getElementById('admin-users-table');
-            tbody.innerHTML = '';
-            usersSnap.forEach(docSnap => {
-                const u = docSnap.data();
-                tbody.innerHTML += `<tr><td class="p-3 font-semibold">${u.userId}</td><td class="p-3">${u.email}</td><td class="p-3 font-bold">${u.status}</td><td class="p-3 text-indigo-600 font-mono">${u.passkey || 'None'}</td><td class="p-3 text-center"><button onclick="updateStatus('${u.userId}', 'approved')" class="bg-emerald-600 text-white px-2 py-1 rounded text-xs">Approve</button> <button onclick="updateStatus('${u.userId}', 'blocked')" class="bg-amber-600 text-white px-2 py-1 rounded text-xs">Block</button> <button onclick="genPasskey('${u.userId}', '${u.email}')" class="bg-indigo-600 text-white px-2 py-1 rounded text-xs">Gen Passkey</button></td></tr>`;
+        window.handleUserLogin = async function() {
+            const uid = document.getElementById('login-userid').value.trim();
+            const pass = document.getElementById('login-pass').value.trim();
+            if(!uid || !pass) return alert('Enter credentials');
+
+            const docRef = window.FirebaseSDK.doc(db, "users", uid);
+            const docSnap = await window.FirebaseSDK.getDoc(docRef);
+
+            if(!docSnap.exists()) return alert('User ID not found!');
+            const userData = docSnap.data();
+
+            if(userData.password !== pass) return alert('Incorrect Password!');
+            if(userData.status !== 'approved') return alert('Account is pending approval or blocked by admin.');
+
+            sessionStorage.setItem('logged_in_user', uid);
+            
+            // Log Session & Keep Last 5 in Firestore
+            const historyRef = window.FirebaseSDK.collection(db, "loginHistory");
+            await window.FirebaseSDK.addDoc(historyRef, {
+                userId: uid,
+                time: new Date().toLocaleString(),
+                device: navigator.userAgent.substring(0, 40)
             });
 
-            // Load Login History
-            const histSnap = await window.FirebaseSDK.getDocs(window.FirebaseSDK.collection(db, "loginHistory"));
-            const histBody = document.getElementById('admin-login-history-table');
-            histBody.innerHTML = '';
-            histSnap.forEach(docSnap => {
-                const h = docSnap.data();
-                histBody.innerHTML += `<tr><td class="p-3 font-semibold">${h.userId}</td><td class="p-3">${h.time}</td><td class="p-3 text-xs font-mono">${h.device}</td></tr>`;
+            document.getElementById('login-modal').classList.add('hidden');
+            switchTab('billing');
+        };
+
+        window.handleRegisterUser = async function() {
+            const uid = document.getElementById('reg-userid').value.trim();
+            const email = document.getElementById('reg-email').value.trim();
+            const pass = document.getElementById('reg-pass').value.trim();
+            if(!uid || !email || !pass) return alert('All fields required');
+
+            await window.FirebaseSDK.setDoc(window.FirebaseSDK.doc(db, "users", uid), {
+                userId: uid, email, password: pass, status: 'pending', passkey: ''
             });
-        }
-
-        window.updateStatus = async function(uid, status) {
-            await window.FirebaseSDK.setDoc(window.FirebaseSDK.doc(db, "users", uid), { status }, { merge: true });
-            alert('User status updated to ' + status);
-            loadAdminData();
+            alert('Registered successfully! Waiting for admin approval.');
+            document.getElementById('register-form-box').classList.add('hidden');
+            document.getElementById('login-form-box').classList.remove('hidden');
         };
 
-        window.genPasskey = async function(uid, email) {
-            const pk = 'PK-' + Math.floor(100000 + Math.random() * 900000);
-            await window.FirebaseSDK.setDoc(window.FirebaseSDK.doc(db, "users", uid), { passkey: pk }, { merge: true });
-            alert(`Passkey generated for ${email}: ${pk}`);
-            loadAdminData();
+        window.handleResetWithPasskey = async function() {
+            const uid = document.getElementById('pk-userid').value.trim();
+            const pk = document.getElementById('pk-passkey').value.trim();
+            const newPass = document.getElementById('pk-newpass').value.trim();
+
+            const docRef = window.FirebaseSDK.doc(db, "users", uid);
+            const docSnap = await window.FirebaseSDK.getDoc(docRef);
+            if(!docSnap.exists()) return alert('User not found');
+            const data = docSnap.data();
+
+            if(data.passkey !== pk) return alert('Invalid Passkey!');
+            await window.FirebaseSDK.setDoc(docRef, { password: newPass, passkey: '' }, { merge: true });
+            alert('Password updated successfully!');
+            document.getElementById('passkey-form-box').classList.add('hidden');
+            document.getElementById('login-form-box').classList.remove('hidden');
         };
+
+        window.saveBillToFirebase = async function() {
+            const cust = document.getElementById('bill-cust-name').value;
+            const grand = document.getElementById('summary-grand').innerText;
+            await window.FirebaseSDK.addDoc(window.FirebaseSDK.collection(db, "bills"), {
+                customer: cust, total: grand, date: new Date().toLocaleDateString()
+            });
+            alert('Bill saved to Firebase Cloud!');
+        };
+
+        window.saveCompanyProfile = async function() {
+            const name = document.getElementById('set-comp-name').value;
+            const address = document.getElementById('set-comp-address').value;
+            await window.FirebaseSDK.setDoc(window.FirebaseSDK.doc(db, "settings", "company"), { name, address });
+            alert('Company profile saved to Cloud!');
+        };
+    </script>
+    <script>
+        // UI Helpers
+        window.switchTab = function(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById(`section-${tabId}`).classList.remove('hidden');
+        };
+        window.showRegisterSection = () => { document.getElementById('login-form-box').classList.add('hidden'); document.getElementById('register-form-box').classList.remove('hidden'); };
+        window.hideRegisterSection = () => { document.getElementById('register-form-box').classList.add('hidden'); document.getElementById('login-form-box').classList.remove('hidden'); };
+        window.showPasskeySection = () => { document.getElementById('login-form-box').classList.add('hidden'); document.getElementById('passkey-form-box').classList.remove('hidden'); };
+        window.hidePasskeySection = () => { document.getElementById('passkey-form-box').classList.add('hidden'); document.getElementById('login-form-box').classList.remove('hidden'); };
+        window.logoutUser = () => { sessionStorage.clear(); location.reload(); };
+        window.addInvoiceRow = function() {
+            const tbody = document.getElementById('invoice-items-body');
+            tbody.innerHTML += `<tr class="border-b"><td class="p-2"><input type="text" value="Item" class="border p-1 text-sm w-full"></td><td class="p-2"><input type="number" value="1" class="border p-1 text-sm w-16" oninput="calculate()"></td><td class="p-2"><input type="number" value="100" class="border p-1 text-sm w-20" oninput="calculate()"></td><td class="p-2 text-right font-bold item-amt">₹100</td><td class="p-2 text-center"><button onclick="this.closest('tr').remove(); calculate();" class="text-red-500"><i class="fa-solid fa-trash"></i></button></td></tr>`;
+            calculate();
+        };
+        window.calculate = function() {
+            let total = 0;
+            document.querySelectorAll('#invoice-items-body tr').forEach(row => {
+                let q = parseFloat(row.querySelector('input[type=number]').value) || 0;
+                let r = row.querySelectorAll('input[type=number]')[1].value || 0;
+                let amt = q * r;
+                row.querySelector('.item-amt').innerText = '₹' + amt;
+                total += amt;
+            });
+            document.getElementById('summary-grand').innerText = '₹' + total;
+            document.getElementById('print-grand').innerText = '₹' + total;
+        };
+        window.liveUpdatePreview = function() {
+            document.getElementById('print-cust-name').innerText = document.getElementById('bill-cust-name').value;
+        };
+        window.onload = function() { addInvoiceRow(); document.getElementById('bill-date').valueAsDate = new Date(); };
     </script>
 </body>
 </html>
