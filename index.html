@@ -3,10 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mahamantra Web Services - Professional Billing System</title>
+    <title>Professional Billing Web Application - Cloud Synced</title>
+    <!-- Tailwind CSS for modern styling -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Firebase SDK (Modular CDN) -->
+    <!-- Firebase SDK (Modular via CDN) -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getFirestore, collection, addDoc, getDocs, doc, setDoc, deleteDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
@@ -18,285 +20,849 @@
         @media print {
             body * { visibility: hidden !important; }
             #printable-bill, #printable-bill * { visibility: visible !important; }
-            #printable-bill { position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 10mm; background: white; z-index: 99999; display: block !important; }
+            #printable-bill { position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 10mm; background: white; box-shadow: none; z-index: 99999; display: block !important; }
+            #printable-report, #printable-report * { visibility: visible !important; }
+            #printable-report { position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 10mm; background: white; box-shadow: none; z-index: 99999; display: block !important; }
             .no-print { display: none !important; }
         }
     </style>
 </head>
 <body class="bg-slate-100 text-slate-800 antialiased min-h-screen flex flex-col">
 
+    <!-- SPLASH SCREEN -->
+    <div id="splash-screen" class="fixed inset-0 bg-indigo-950 z-50 flex flex-col items-center justify-center text-white transition-opacity duration-1000">
+        <div class="animate-bounce mb-4">
+            <i class="fa-solid fa-file-invoice-dollar text-6xl text-indigo-400"></i>
+        </div>
+        <h1 id="splash-title" class="text-3xl font-extrabold tracking-wider opacity-0 transition-opacity duration-1000">Mahamantra Web Services</h1>
+        <p class="text-xs text-indigo-300 mt-2 tracking-widest uppercase">Loading Cloud Application...</p>
+    </div>
+
     <!-- LOGIN MODAL -->
-    <div id="login-modal" class="fixed inset-0 bg-black bg-opacity-70 z-40 flex items-center justify-center">
+    <div id="login-modal" class="fixed inset-0 bg-black bg-opacity-70 z-40 flex items-center justify-center hidden">
         <div class="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl space-y-6">
             <div class="text-center">
                 <i class="fa-solid fa-shield-halved text-4xl text-indigo-600 mb-2"></i>
-                <h2 class="text-2xl font-bold text-slate-900">User Login</h2>
-                <p class="text-xs text-slate-500 mt-1">Mahamantra Web Services (Firebase Connected)</p>
+                <h2 class="text-2xl font-bold text-slate-900">Owner Login</h2>
+                <p class="text-xs text-slate-500 mt-1">Mahamantra Web Services Billing System</p>
             </div>
             
             <div id="login-form-box" class="space-y-4">
                 <div>
-                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">User ID</label>
-                    <input type="text" id="login-userid" placeholder="Enter ID" class="w-full border rounded-lg p-3 text-sm focus:ring-2 focus:ring-indigo-500">
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Owner User ID</label>
+                    <input type="text" id="login-userid" placeholder="Enter ID" class="w-full border rounded-lg p-3 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Password</label>
-                    <input type="password" id="login-pass" placeholder="Enter Password" class="w-full border rounded-lg p-3 text-sm focus:ring-2 focus:ring-indigo-500">
+                    <input type="password" id="login-pass" placeholder="Enter Password" class="w-full border rounded-lg p-3 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
                 </div>
-                <button onclick="handleUserLogin()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-lg font-bold text-sm transition shadow-md">Login to System</button>
-                <div class="flex justify-between items-center text-xs pt-2">
-                    <button onclick="showRegisterSection()" class="text-indigo-600 hover:underline font-semibold">New User? Register</button>
-                    <button onclick="showPasskeySection()" class="text-indigo-600 hover:underline font-semibold">Reset Password via Passkey</button>
-                </div>
-            </div>
-
-            <!-- REGISTER SECTION -->
-            <div id="register-form-box" class="space-y-4 hidden">
-                <div class="bg-indigo-50 p-3 rounded-lg border border-indigo-200 text-xs text-indigo-800">
-                    <p class="font-bold mb-0.5"><i class="fa-solid fa-circle-info"></i> Account Registration</p>
-                    Admin approval is required before you can login.
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">User ID</label>
-                    <input type="text" id="reg-userid" placeholder="Enter User ID" class="w-full border rounded-lg p-2.5 text-sm">
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Email Address</label>
-                    <input type="email" id="reg-email" placeholder="Enter Email for Passkey" class="w-full border rounded-lg p-2.5 text-sm">
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Password</label>
-                    <input type="password" id="reg-pass" placeholder="Enter Password" class="w-full border rounded-lg p-2.5 text-sm">
-                </div>
-                <div class="flex space-x-2">
-                    <button onclick="handleRegisterUser()" class="flex-1 bg-emerald-600 text-white py-2.5 rounded-lg font-bold text-sm">Submit Registration</button>
-                    <button onclick="hideRegisterSection()" class="bg-slate-200 text-slate-700 px-4 rounded-lg text-sm font-semibold">Cancel</button>
+                <button onclick="handleOwnerLogin()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-lg font-bold text-sm transition shadow-md">Login to System</button>
+                <div class="text-right">
+                    <button onclick="showForgetSection()" class="text-xs text-indigo-600 hover:underline font-semibold">Forgot Password?</button>
                 </div>
             </div>
 
-            <!-- PASSKEY RESET SECTION -->
-            <div id="passkey-form-box" class="space-y-4 hidden">
-                <div>
-                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">User ID</label>
-                    <input type="text" id="pk-userid" placeholder="Enter User ID" class="w-full border rounded-lg p-2.5 text-sm">
+            <!-- FORGET PASSWORD BOX -->
+            <div id="forget-form-box" class="space-y-4 hidden">
+                <div class="bg-amber-50 p-3 rounded-lg border border-amber-200 text-xs text-amber-800">
+                    <p class="font-bold mb-0.5"><i class="fa-solid fa-triangle-exclamation"></i> Reset Password Notice</p>
+                    Enter Developer Password along with your new owner credentials to reset.
                 </div>
                 <div>
-                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Passkey (from Admin Email)</label>
-                    <input type="text" id="pk-passkey" placeholder="Enter Passkey" class="w-full border rounded-lg p-2.5 text-sm">
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Developer Master Password</label>
+                    <input type="password" id="forget-dev-pass" placeholder="Enter Developer Password" class="w-full border rounded-lg p-3 text-sm focus:outline-none">
                 </div>
                 <div>
-                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">New Password</label>
-                    <input type="password" id="pk-newpass" placeholder="Enter New Password" class="w-full border rounded-lg p-2.5 text-sm">
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">New Owner ID</label>
+                    <input type="text" id="forget-new-userid" placeholder="Enter New ID" class="w-full border rounded-lg p-3 text-sm focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">New Owner Password</label>
+                    <input type="password" id="forget-new-pass" placeholder="Enter New Password" class="w-full border rounded-lg p-3 text-sm focus:outline-none">
                 </div>
                 <div class="flex space-x-2">
-                    <button onclick="handleResetWithPasskey()" class="flex-1 bg-amber-600 text-white py-2.5 rounded-lg font-bold text-sm">Update Password</button>
-                    <button onclick="hidePasskeySection()" class="bg-slate-200 text-slate-700 px-4 rounded-lg text-sm font-semibold">Cancel</button>
+                    <button onclick="handleResetPassword()" class="flex-1 bg-amber-600 hover:bg-amber-700 text-white py-3 rounded-lg font-bold text-sm transition shadow-md">Reset Password</button>
+                    <button onclick="hideForgetSection()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 rounded-lg font-semibold text-sm transition">Cancel</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Header -->
+    <!-- Header Navigation -->
     <header class="bg-indigo-900 text-white shadow-md sticky top-0 z-30 no-print">
-        <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
-            <h1 class="text-xl font-bold" id="nav-company-name">Mahamantra Web Services</h1>
-            <nav class="flex space-x-4 items-center">
-                <button onclick="switchTab('billing')" id="tab-billing" class="px-4 py-2 rounded-lg font-medium bg-emerald-600 text-white">New Bill</button>
-                <button onclick="switchTab('reports')" id="tab-reports" class="px-4 py-2 rounded-lg font-medium hover:bg-indigo-800">Reports</button>
-                <button onclick="switchTab('settings')" id="tab-settings" class="px-4 py-2 rounded-lg font-medium hover:bg-indigo-800">Settings</button>
-                <button onclick="logoutUser()" class="px-3 py-2 rounded-lg bg-rose-600 text-white text-sm" title="Logout"><i class="fa-solid fa-power-off"></i></button>
+        <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <i class="fa-solid fa-file-invoice-dollar text-2xl text-indigo-400"></i>
+                <h1 class="text-xl font-bold tracking-wide" id="nav-company-name">Mahamantra Web Services</h1>
+            </div>
+            <nav class="flex space-x-2 sm:space-x-4 mt-2 sm:mt-0 items-center">
+                <button onclick="clickNewBillTab()" id="tab-billing" class="px-4 py-2 rounded-lg font-medium bg-emerald-600 text-white transition hover:bg-emerald-700 flex items-center space-x-2 shadow">
+                    <i class="fa-solid fa-file-circle-plus"></i> <span>New Bill</span>
+                </button>
+                <button onclick="switchTab('reports')" id="tab-reports" class="px-4 py-2 rounded-lg font-medium bg-indigo-900 text-indigo-200 transition hover:bg-indigo-800 hover:text-white flex items-center space-x-2">
+                    <i class="fa-solid fa-chart-line"></i> <span>Reports</span>
+                </button>
+                <button onclick="switchTab('settings')" id="tab-settings" class="px-4 py-2 rounded-lg font-medium bg-indigo-900 text-indigo-200 transition hover:bg-indigo-800 hover:text-white flex items-center space-x-2">
+                    <i class="fa-solid fa-gear"></i> <span>Settings & Master</span>
+                </button>
+                <button onclick="logoutOwner()" class="px-3 py-2 rounded-lg font-medium bg-rose-600 text-white transition hover:bg-rose-700 text-sm" title="Logout Owner">
+                    <i class="fa-solid fa-power-off"></i>
+                </button>
             </nav>
         </div>
     </header>
 
+    <!-- Main Container -->
     <main class="flex-grow max-w-7xl w-full mx-auto px-4 py-6">
-        <!-- BILLING SECTION -->
+
+        <!-- Firebase Warning Banner -->
+        <div id="firebase-warning" class="bg-amber-50 border-l-4 border-amber-500 p-4 mb-6 rounded-r-lg shadow-sm no-print">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <i class="fa-solid fa-triangle-exclamation text-amber-500 text-xl"></i>
+                    <p class="text-sm text-amber-700 font-medium">Configure your Firebase settings below to enable cross-device syncing.</p>
+                </div>
+                <button onclick="switchTab('settings')" class="text-xs bg-amber-600 text-white px-3 py-1.5 rounded font-semibold hover:bg-amber-700 transition">Configure</button>
+            </div>
+        </div>
+
+        <!-- TAB 1: BILLING -->
         <section id="section-billing" class="tab-content space-y-6">
             <div class="bg-white rounded-xl shadow-md p-6 no-print">
-                <div class="flex justify-between items-center border-b pb-4 mb-6">
-                    <h2 class="text-xl font-bold text-slate-800">Generate Invoice</h2>
-                    <div class="flex space-x-4">
-                        <input type="text" id="bill-number" class="bg-slate-100 border rounded px-3 py-1.5 text-sm font-bold text-indigo-600 w-32" readonly>
-                        <input type="date" id="bill-date" class="border rounded px-3 py-1.5 text-sm">
+                <div class="flex flex-wrap justify-between items-center border-b pb-4 mb-6">
+                    <div class="flex items-center space-x-4">
+                        <h2 class="text-xl font-bold text-slate-800 flex items-center space-x-2">
+                            <i class="fa-solid fa-pen-to-square text-indigo-600"></i>
+                            <span id="form-mode-title">Generate Invoice</span>
+                        </h2>
+                        <button onclick="resetBillingForm()" id="cancel-edit-btn" class="hidden text-xs bg-slate-500 text-white px-3 py-1.5 rounded font-semibold hover:bg-slate-600 transition">Cancel Edit</button>
+                    </div>
+                    
+                    <div class="flex items-center space-x-4">
+                        <div class="flex items-center space-x-1">
+                            <input type="text" id="search-bill-no-input" placeholder="Search Bill No (e.g. A1)" class="border border-slate-300 rounded px-2.5 py-1.5 text-sm w-40">
+                            <button onclick="loadBillForEditing()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded text-sm font-semibold transition" title="Edit Existing Bill"><i class="fa-solid fa-search"></i></button>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-500 uppercase">Financial Year</label>
+                            <input type="text" id="bill-fin-year" class="mt-1 bg-slate-100 border rounded px-3 py-1.5 text-sm font-bold w-32" readonly>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-500 uppercase">Bill Number</label>
+                            <input type="text" id="bill-number" class="mt-1 bg-slate-100 border rounded px-3 py-1.5 text-sm font-bold text-indigo-600 w-32" readonly>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-500 uppercase">Date</label>
+                            <input type="date" id="bill-date" class="mt-1 border rounded px-3 py-1.5 text-sm">
+                        </div>
                     </div>
                 </div>
-                <!-- Customer & Items Setup -->
-                <div class="grid grid-cols-3 gap-4 mb-4">
-                    <input type="text" id="bill-cust-name" placeholder="Customer Name" class="border p-2.5 rounded text-sm" oninput="liveUpdatePreview()">
-                    <input type="text" id="bill-cust-address" placeholder="Customer Address" class="border p-2.5 rounded text-sm" oninput="liveUpdatePreview()">
-                    <select id="bill-pay-mode" class="border p-2.5 rounded text-sm"><option value="Cash">Cash</option><option value="Online">Online</option><option value="Cheque">Cheque</option></select>
+
+                <!-- Customer Selection & Payment Mode -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">Select Customer</label>
+                        <select id="bill-customer-select" onchange="onCustomerSelect()" class="w-full border rounded-lg p-2.5 text-sm">
+                            <option value="">-- Select Customer --</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">Customer Name</label>
+                        <input type="text" id="bill-cust-name" placeholder="Customer Name" class="w-full border rounded-lg p-2.5 text-sm" oninput="liveUpdatePreview()">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">Customer Address</label>
+                        <input type="text" id="bill-cust-address" placeholder="Customer Address" class="w-full border rounded-lg p-2.5 text-sm" oninput="liveUpdatePreview()">
+                    </div>
                 </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">Payment Mode</label>
+                        <select id="bill-pay-mode" onchange="toggleCheckNumber(); liveUpdatePreview();" class="w-full border rounded-lg p-2.5 text-sm">
+                            <option value="Cash">Cash</option>
+                            <option value="Online">Online / UPI</option>
+                            <option value="Cheque">Cheque</option>
+                        </select>
+                    </div>
+                    <div id="check-number-container" class="hidden">
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">Cheque Number</label>
+                        <input type="text" id="bill-check-num" placeholder="Enter Cheque No" class="w-full border rounded-lg p-2.5 text-sm" oninput="liveUpdatePreview()">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">Signature Option</label>
+                        <select id="bill-sig-option" onchange="liveUpdatePreview()" class="w-full border rounded-lg p-2.5 text-sm">
+                            <option value="system">This is a system generated bill</option>
+                            <option value="manual">Manual Signature</option>
+                        </select>
+                    </div>
+                </div>
+
                 <!-- Items Table -->
-                <table class="w-full text-left border-collapse mb-4" id="invoice-items-table">
-                    <thead>
-                        <tr class="bg-slate-100 text-xs uppercase border-b">
-                            <th class="p-2">Item</th><th class="p-2">Qty</th><th class="p-2">Rate</th><th class="p-2 text-right">Amount</th><th class="p-2 text-center">Action</th>
-                        </tr>
-                    </thead>
-                    <tbody id="invoice-items-body" class="text-sm divide-y"></tbody>
-                </table>
-                <button onclick="addInvoiceRow()" class="bg-indigo-50 text-indigo-700 px-4 py-2 rounded text-sm font-semibold mb-4">+ Add Item</button>
-                <div class="flex justify-between border-t pt-4">
-                    <span class="text-lg font-bold">Grand Total: <span id="summary-grand" class="text-indigo-600">₹0.00</span></span>
-                    <button onclick="saveBillToFirebase()" class="bg-emerald-600 text-white px-6 py-2.5 rounded font-bold text-sm">Save Bill to Cloud</button>
+                <div class="mb-6 overflow-x-auto">
+                    <table class="w-full text-left border-collapse" id="invoice-items-table">
+                        <thead>
+                            <tr class="bg-slate-100 text-slate-700 text-xs uppercase font-semibold border-b">
+                                <th class="p-3 w-12 text-center">Sr</th>
+                                <th class="p-3 w-1/4">Item / Description</th>
+                                <th class="p-3 w-24">Qty</th>
+                                <th class="p-3 w-24">Unit</th>
+                                <th class="p-3 w-28">Rate (₹)</th>
+                                <th class="p-3 w-24">GST %</th>
+                                <th class="p-3 w-32 text-right">Amount (₹)</th>
+                                <th class="p-3 w-16 text-center">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="invoice-items-body" class="text-sm divide-y"></tbody>
+                    </table>
+                    <button onclick="addInvoiceRow()" class="mt-3 bg-indigo-50 text-indigo-700 border hover:bg-indigo-100 px-4 py-2 rounded-lg text-sm font-semibold flex items-center space-x-2">
+                        <i class="fa-solid fa-plus"></i> <span>Add Item Row</span>
+                    </button>
+                </div>
+
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center pt-4 border-t gap-4">
+                    <div class="w-full md:w-1/2">
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">Terms & Conditions</label>
+                        <textarea id="bill-terms" rows="3" class="w-full border rounded-lg p-2.5 text-sm" oninput="liveUpdatePreview()"></textarea>
+                    </div>
+                    <div class="w-full md:w-1/3 bg-slate-50 p-4 rounded-xl border space-y-2 text-sm">
+                        <div class="flex justify-between"><span>Subtotal:</span><span id="summary-subtotal" class="font-semibold">₹0.00</span></div>
+                        <div class="flex justify-between"><span>GST Total:</span><span id="summary-gst" class="font-semibold">₹0.00</span></div>
+                        <div class="flex justify-between"><span>Roundoff:</span><span id="summary-round" class="font-semibold">₹0.00</span></div>
+                        <div class="flex justify-between text-lg font-bold border-t pt-2"><span>Grand Total:</span><span id="summary-grand" class="text-indigo-600">₹0.00</span></div>
+                        <div class="flex space-x-3 pt-3">
+                            <input type="hidden" id="editing-bill-id" value="">
+                            <button onclick="saveBill()" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-lg font-semibold transition shadow flex items-center justify-center space-x-2">
+                                <i class="fa-solid fa-floppy-disk"></i> <span id="save-btn-text">Save Bill</span>
+                            </button>
+                            <button onclick="printBill()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-2.5 rounded-lg font-semibold transition shadow flex items-center justify-center space-x-2">
+                                <i class="fa-solid fa-print"></i> <span>Print</span>
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <!-- LIVE PREVIEW -->
-            <div id="printable-bill" class="bg-white p-8 max-w-[210mm] mx-auto shadow-lg rounded-xl border">
-                <h2 class="text-2xl font-bold text-indigo-900" id="print-company-name">Company Name</h2>
-                <p class="text-xs text-slate-600" id="print-company-address"></p>
-                <hr class="my-4">
-                <p><strong>Customer:</strong> <span id="print-cust-name"></span></p>
-                <p><strong>Grand Total:</strong> <span id="print-grand">₹0.00</span></p>
+            <!-- LIVE PREVIEW CONTAINER -->
+            <div class="mt-8">
+                <h3 class="text-md font-bold text-slate-700 mb-2 no-print"><i class="fa-solid fa-eye text-indigo-600"></i> Live Bill Preview</h3>
+                <div id="printable-bill" class="bg-white p-8 max-w-[210mm] mx-auto text-slate-800 text-sm shadow-lg rounded-xl border">
+                    <div class="flex justify-between items-start border-b-2 border-indigo-900 pb-6 mb-6">
+                        <div class="flex items-center space-x-4">
+                            <img id="print-logo" src="" alt="Logo" class="w-20 h-20 object-contain hidden">
+                            <div>
+                                <h2 id="print-company-name" class="text-2xl font-bold text-indigo-900">Company Name</h2>
+                                <p id="print-company-address" class="text-slate-600 text-xs mt-1"></p>
+                                <p class="text-slate-600 text-xs mt-0.5">GSTN: <span id="print-company-gst" class="font-semibold"></span> | Mobile: <span id="print-company-mobile" class="font-semibold"></span></p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <h1 class="text-3xl font-extrabold text-indigo-900">TAX INVOICE</h1>
+                            <p class="text-xs font-bold text-slate-500 mt-1">Invoice No: <span id="print-bill-no" class="text-indigo-600"></span></p>
+                            <p class="text-xs text-slate-500">Date: <span id="print-bill-date" class="font-semibold"></span></p>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-6 mb-6 bg-slate-50 p-4 rounded-lg border">
+                        <div>
+                            <h3 class="text-xs font-bold uppercase text-slate-500 mb-1">Billed To:</h3>
+                            <p id="print-cust-name" class="font-bold text-base"></p>
+                            <p id="print-cust-address" class="text-slate-600 text-xs"></p>
+                        </div>
+                    </div>
+                    <table class="w-full text-left border-collapse mb-6">
+                        <thead>
+                            <tr class="bg-indigo-900 text-white text-xs uppercase">
+                                <th class="p-2.5 text-center">Sr</th><th class="p-2.5">Item</th><th class="p-2.5 text-center">Qty</th><th class="p-2.5 text-center">Unit</th><th class="p-2.5 text-right">Rate</th><th class="p-2.5 text-center">GST</th><th class="p-2.5 text-right">Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody id="print-items-body" class="divide-y text-xs"></tbody>
+                    </table>
+                    <div class="flex justify-between border-t pt-4 text-xs">
+                        <div class="w-1/2 pr-4"><p id="print-terms" class="text-slate-600 text-xs whitespace-pre-line"></p></div>
+                        <div class="w-2/5 space-y-1">
+                            <div class="flex justify-between"><span>Subtotal:</span><span id="print-subtotal"></span></div>
+                            <div class="flex justify-between"><span>GST:</span><span id="print-gst"></span></div>
+                            <div class="flex justify-between text-sm font-bold text-indigo-900 border-t pt-2"><span>Grand Total:</span><span id="print-grand"></span></div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </section>
 
-        <!-- REPORTS SECTION -->
+        <!-- TAB 2: REPORTS -->
         <section id="section-reports" class="tab-content hidden space-y-6">
-            <div class="bg-white rounded-xl shadow-md p-6">
-                <h2 class="text-xl font-bold mb-4">Saved Bills from Cloud</h2>
-                <div id="reports-list" class="space-y-2 text-sm"></div>
+            <div class="bg-white rounded-xl shadow-md p-6 no-print">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold text-slate-800">Sales & GST Reports</h2>
+                    <button onclick="downloadReportPDF()" id="pdf-download-btn" class="hidden bg-rose-600 text-white px-4 py-2 rounded-lg text-sm font-semibold">Print Report</button>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 bg-slate-50 p-4 rounded-xl border">
+                    <div>
+                        <label class="block text-xs font-semibold uppercase mb-1">Filter Type</label>
+                        <select id="report-type" onchange="toggleReportFilters()" class="w-full border rounded p-2 text-sm">
+                            <option value="day">Day Wise</option>
+                            <option value="month">Month Wise</option>
+                            <option value="financial_year">Financial Year Wise</option>
+                            <option value="customer">Customer Wise</option>
+                        </select>
+                    </div>
+                    <div id="filter-date-container"><label class="block text-xs font-semibold uppercase mb-1">Date</label><input type="date" id="report-date-input" class="w-full border rounded p-2 text-sm"></div>
+                    <div id="filter-month-container" class="hidden"><label class="block text-xs font-semibold uppercase mb-1">Month</label><input type="month" id="report-month-input" class="w-full border rounded p-2 text-sm"></div>
+                    <div id="filter-fy-container" class="hidden"><label class="block text-xs font-semibold uppercase mb-1">FY</label><input type="text" id="report-fy-input" placeholder="2025-2026" class="w-full border rounded p-2 text-sm"></div>
+                    <div id="filter-customer-container" class="hidden"><label class="block text-xs font-semibold uppercase mb-1">Customer</label><select id="report-customer-select" class="w-full border rounded p-2 text-sm"><option value="">-- Select --</option></select></div>
+                    <div class="flex items-end"><button onclick="generateReport()" class="w-full bg-indigo-600 text-white py-2 rounded font-semibold text-sm">Generate</button></div>
+                </div>
+                <div class="grid grid-cols-3 gap-4 mb-6">
+                    <div class="bg-indigo-50 p-4 rounded-xl border"><p class="text-xs font-bold text-indigo-600 uppercase">Sales</p><p id="rep-total-sales" class="text-xl font-bold">₹0.00</p></div>
+                    <div class="bg-emerald-50 p-4 rounded-xl border"><p class="text-xs font-bold text-emerald-600 uppercase">GST</p><p id="rep-total-gst" class="text-xl font-bold">₹0.00</p></div>
+                    <div class="bg-blue-50 p-4 rounded-xl border"><p class="text-xs font-bold text-blue-600 uppercase">Count</p><p id="rep-total-bills" class="text-xl font-bold">0</p></div>
+                </div>
+                <table class="w-full text-left border-collapse text-sm">
+                    <thead><tr class="bg-slate-100 uppercase text-xs border-b"><th class="p-3">Bill No</th><th class="p-3">Date</th><th class="p-3">Customer</th><th class="p-3 text-right">Total</th><th class="p-3 text-center">Action</th></tr></thead>
+                    <tbody id="report-table-body" class="divide-y"></tbody>
+                </table>
             </div>
         </section>
 
-        <!-- SETTINGS SECTION -->
+        <!-- TAB 3: SETTINGS & MASTER -->
         <section id="section-settings" class="tab-content hidden space-y-6">
-            <div class="bg-white rounded-xl shadow-md p-6 space-y-4">
-                <h3 class="text-lg font-bold">Company Profile</h3>
-                <input type="text" id="set-comp-name" placeholder="Company Name" class="w-full border p-2 rounded text-sm">
-                <input type="text" id="set-comp-address" placeholder="Address" class="w-full border p-2 rounded text-sm">
-                <button onclick="saveCompanyProfile()" class="bg-indigo-600 text-white px-4 py-2 rounded text-sm">Save Profile</button>
+            <!-- Firebase Config -->
+            <div class="bg-white rounded-xl shadow-md p-6">
+                <h3 class="text-lg font-bold mb-4"><i class="fa-solid fa-database text-indigo-600"></i> Firebase Cloud Configuration</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                    <input type="text" id="fb-apiKey" placeholder="API Key" class="fb-field border rounded p-2 text-sm bg-slate-100" readonly>
+                    <input type="text" id="fb-authDomain" placeholder="Auth Domain" class="fb-field border rounded p-2 text-sm bg-slate-100" readonly>
+                    <input type="text" id="fb-projectId" placeholder="Project ID" class="fb-field border rounded p-2 text-sm bg-slate-100" readonly>
+                    <input type="text" id="fb-storageBucket" placeholder="Storage Bucket" class="fb-field border rounded p-2 text-sm bg-slate-100" readonly>
+                    <input type="text" id="fb-messagingSenderId" placeholder="Sender ID" class="fb-field border rounded p-2 text-sm bg-slate-100" readonly>
+                    <input type="text" id="fb-appId" placeholder="App ID" class="fb-field border rounded p-2 text-sm bg-slate-100" readonly>
+                </div>
+                <button onclick="requestUnlockFirebase()" id="unlock-fb-btn" class="bg-amber-600 text-white px-4 py-2 rounded text-sm font-semibold">Unlock with Developer Password</button>
+                <button onclick="saveFirebaseConfig()" id="save-fb-btn" class="hidden bg-indigo-600 text-white px-4 py-2 rounded text-sm font-semibold">Save & Connect</button>
+            </div>
+
+            <!-- Company Profile -->
+            <div class="bg-white rounded-xl shadow-md p-6">
+                <h3 class="text-lg font-bold mb-4"><i class="fa-solid fa-building text-indigo-600"></i> Company Profile & Logo</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                    <input type="text" id="set-comp-name" placeholder="Company Name" class="border rounded p-2 text-sm">
+                    <input type="text" id="set-comp-gst" placeholder="GSTN" class="border rounded p-2 text-sm">
+                    <input type="text" id="set-comp-mobile" placeholder="Mobile" class="border rounded p-2 text-sm">
+                    <input type="text" id="set-comp-email" placeholder="Email" class="border rounded p-2 text-sm">
+                    <input type="text" id="set-comp-address" placeholder="Address" class="md:col-span-2 border rounded p-2 text-sm">
+                    <input type="text" id="set-comp-logo" placeholder="Logo Image URL" class="md:col-span-3 border rounded p-2 text-sm">
+                </div>
+                <button onclick="saveCompanyProfile()" class="bg-indigo-600 text-white px-4 py-2 rounded text-sm font-semibold">Save Profile</button>
+            </div>
+
+            <!-- Manage Customers -->
+            <div class="bg-white rounded-xl shadow-md p-6">
+                <h3 class="text-lg font-bold mb-4"><i class="fa-solid fa-users text-indigo-600"></i> Manage Customers</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 bg-slate-50 p-4 rounded">
+                    <input type="text" id="master-cust-name" placeholder="Customer Name" class="border rounded p-2 text-sm">
+                    <input type="text" id="master-cust-addr" placeholder="Address" class="border rounded p-2 text-sm">
+                    <button onclick="saveCustomerMaster()" class="bg-emerald-600 text-white rounded p-2 text-sm font-semibold">Save Customer</button>
+                </div>
+                <table class="w-full text-left border-collapse text-sm">
+                    <thead><tr class="bg-slate-100 uppercase text-xs border-b"><th class="p-3">Name</th><th class="p-3">Address</th><th class="p-3 text-center">Action</th></tr></thead>
+                    <tbody id="master-customer-table" class="divide-y"></tbody>
+                </table>
+            </div>
+
+            <!-- Manage Items -->
+            <div class="bg-white rounded-xl shadow-md p-6">
+                <h3 class="text-lg font-bold mb-4"><i class="fa-solid fa-boxes-stacked text-indigo-600"></i> Manage Items & Rates</h3>
+                <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4 bg-slate-50 p-4 rounded">
+                    <input type="text" id="master-item-name" placeholder="Item Name" class="md:col-span-2 border rounded p-2 text-sm">
+                    <input type="text" id="master-item-unit" placeholder="Unit (Kg/Ton)" value="Kg" class="border rounded p-2 text-sm">
+                    <input type="number" step="0.01" id="master-item-rate" placeholder="Rate (₹)" class="border rounded p-2 text-sm">
+                    <input type="number" step="0.01" id="master-item-gst" placeholder="GST %" value="5" class="border rounded p-2 text-sm">
+                    <button onclick="saveItemMaster()" class="md:col-span-5 bg-emerald-600 text-white rounded py-2 text-sm font-semibold">Save Item</button>
+                </div>
+                <table class="w-full text-left border-collapse text-sm">
+                    <thead><tr class="bg-slate-100 uppercase text-xs border-b"><th class="p-3">Item</th><th class="p-3">Unit</th><th class="p-3">Rate</th><th class="p-3">GST</th><th class="p-3 text-center">Action</th></tr></thead>
+                    <tbody id="master-item-table" class="divide-y"></tbody>
+                </table>
+            </div>
+
+            <!-- Terms -->
+            <div class="bg-white rounded-xl shadow-md p-6">
+                <h3 class="text-lg font-bold mb-4"><i class="fa-solid fa-file-contract text-indigo-600"></i> Default Terms</h3>
+                <textarea id="master-default-terms" rows="3" class="w-full border rounded p-2.5 text-sm mb-4"></textarea>
+                <button onclick="saveDefaultTerms()" class="bg-indigo-600 text-white px-4 py-2 rounded text-sm font-semibold">Save Terms</button>
             </div>
         </section>
     </main>
 
+    <!-- Confirmation Modal -->
+    <div id="confirm-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-xl p-6 max-w-sm w-full shadow-2xl">
+            <h3 id="confirm-title" class="text-lg font-bold mb-2">Are you sure?</h3>
+            <p id="confirm-message" class="text-sm text-slate-600 mb-6">Do you want to delete this record?</p>
+            <div class="flex space-x-3">
+                <button id="confirm-yes-btn" class="flex-1 bg-red-600 text-white py-2 rounded font-semibold">Yes</button>
+                <button onclick="closeConfirmModal()" class="flex-1 bg-slate-200 text-slate-700 py-2 rounded font-semibold">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Application Script -->
     <script type="module">
-        // Firebase Config (Replace with your Firebase Project Credentials)
-       const firebaseConfig = {
-  apiKey: "AIzaSyBmglc-sNRtEfTh8yg7WGgUBWq1Ejdf04c",
-  authDomain: "probilling-app-admin.firebaseapp.com",
-  projectId: "probilling-app-admin",
-  storageBucket: "probilling-app-admin.firebasestorage.app",
-  messagingSenderId: "806696935154",
-  appId: "1:806696935154:web:96f76acf22f6768deb3a6b",
-  measurementId: "G-5YRX2NVRHC"
-};
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, collection, addDoc, getDocs, doc, setDoc, deleteDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-        let db;
-        try {
-            const app = window.FirebaseSDK.initializeApp(firebaseConfig);
-            db = window.FirebaseSDK.getFirestore(app);
-            window.dbInstance = db;
-        } catch(e) { console.error("Firebase init error:", e); }
+        let db = null;
+        window.appData = {
+            firebaseConfig: null,
+            ownerAuth: { userId: "owner", password: "123" },
+            company: { name: "Mahamantra Web Services", gstn: "24AAAAA0000A1Z5", mobile: "9876543210", email: "info@mahamantra.com", address: "Ahmedabad, Gujarat", logo: "" },
+            customers: [],
+            items: [],
+            bills: [],
+            defaultTerms: "1. Goods once sold will not be taken back.\n2. Subject to Ahmedabad Jurisdiction."
+        };
+        const DEVELOPER_PASSWORD = "admin123";
+        window.DEVELOPER_PASSWORD = DEVELOPER_PASSWORD;
 
-        window.handleUserLogin = async function() {
+        window.initFirebaseConnection = function(config) {
+            try {
+                if (config && config.apiKey) {
+                    const app = initializeApp(config);
+                    db = getFirestore(app);
+                    window.db = db;
+                    document.getElementById('firebase-warning').classList.add('hidden');
+                    loadDataFromCloud();
+                }
+            } catch(e) { console.error("Firebase init error:", e); }
+        };
+
+        window.loadDataFromCloud = async function() {
+            if (!db) return;
+            try {
+                // Load Settings
+                const setSnap = await getDoc(doc(db, "settings", "main"));
+                if (setSnap.exists()) {
+                    const d = setSnap.data();
+                    if (d.company) window.appData.company = d.company;
+                    if (d.ownerAuth) window.appData.ownerAuth = d.ownerAuth;
+                    if (d.defaultTerms) window.appData.defaultTerms = d.defaultTerms;
+                }
+                // Load Customers
+                const custSnap = await getDocs(collection(db, "customers"));
+                window.appData.customers = [];
+                custSnap.forEach(d => window.appData.customers.push(d.data()));
+
+                // Load Items
+                const itemSnap = await getDocs(collection(db, "items"));
+                window.appData.items = [];
+                itemSnap.forEach(d => window.appData.items.push(d.data()));
+
+                // Load Bills
+                const billSnap = await getDocs(collection(db, "bills"));
+                window.appData.bills = [];
+                billSnap.forEach(d => window.appData.bills.push(d.data()));
+
+                loadSettingsUI();
+                initBillingForm();
+            } catch(e) { console.error("Cloud load error:", e); }
+        };
+
+        window.saveSettingsToCloud = async function() {
+            if (!db) { saveLocalStorage(); return; }
+            try {
+                await setDoc(doc(db, "settings", "main"), {
+                    company: window.appData.company,
+                    ownerAuth: window.appData.ownerAuth,
+                    defaultTerms: window.appData.defaultTerms
+                });
+            } catch(e) { console.error(e); }
+        };
+
+        function loadLocalStorage() {
+            const saved = localStorage.getItem('pro_billing_data_cloud');
+            if (saved) {
+                try { window.appData = JSON.parse(saved); } catch(e) {}
+            }
+            if (window.appData.firebaseConfig && window.appData.firebaseConfig.apiKey) {
+                window.initFirebaseConnection(window.appData.firebaseConfig);
+            }
+        }
+        function saveLocalStorage() {
+            localStorage.setItem('pro_billing_data_cloud', JSON.stringify(window.appData));
+        }
+
+        window.onload = function() {
+            loadLocalStorage();
+            loadSettingsUI();
+            setTimeout(() => {
+                document.getElementById('splash-title').classList.remove('opacity-0');
+            }, 500);
+            setTimeout(() => {
+                const splash = document.getElementById('splash-screen');
+                splash.classList.add('opacity-0');
+                setTimeout(() => {
+                    splash.classList.add('hidden');
+                    checkOwnerLoginSession();
+                }, 1000);
+            }, 3000);
+        };
+
+        window.checkOwnerLoginSession = function() {
+            if (sessionStorage.getItem('owner_logged_in') !== 'true') {
+                document.getElementById('login-modal').classList.remove('hidden');
+            } else {
+                switchTab('billing');
+            }
+        };
+
+        window.handleOwnerLogin = function() {
             const uid = document.getElementById('login-userid').value.trim();
             const pass = document.getElementById('login-pass').value.trim();
-            if(!uid || !pass) return alert('Enter credentials');
+            const targetId = window.appData.ownerAuth ? window.appData.ownerAuth.userId : "owner";
+            const targetPass = window.appData.ownerAuth ? window.appData.ownerAuth.password : "123";
 
-            const docRef = window.FirebaseSDK.doc(db, "users", uid);
-            const docSnap = await window.FirebaseSDK.getDoc(docRef);
-
-            if(!docSnap.exists()) return alert('User ID not found!');
-            const userData = docSnap.data();
-
-            if(userData.password !== pass) return alert('Incorrect Password!');
-            if(userData.status !== 'approved') return alert('Account is pending approval or blocked by admin.');
-
-            sessionStorage.setItem('logged_in_user', uid);
-            
-            // Log Session & Keep Last 5 in Firestore
-            const historyRef = window.FirebaseSDK.collection(db, "loginHistory");
-            await window.FirebaseSDK.addDoc(historyRef, {
-                userId: uid,
-                time: new Date().toLocaleString(),
-                device: navigator.userAgent.substring(0, 40)
-            });
-
-            document.getElementById('login-modal').classList.add('hidden');
-            switchTab('billing');
+            if (uid === targetId && pass === targetPass) {
+                sessionStorage.setItem('owner_logged_in', 'true');
+                document.getElementById('login-modal').classList.add('hidden');
+                document.getElementById('login-userid').value = '';
+                document.getElementById('login-pass').value = '';
+                switchTab('billing');
+            } else {
+                alert('Invalid User ID or Password!');
+            }
         };
 
-        window.handleRegisterUser = async function() {
-            const uid = document.getElementById('reg-userid').value.trim();
-            const email = document.getElementById('reg-email').value.trim();
-            const pass = document.getElementById('reg-pass').value.trim();
-            if(!uid || !email || !pass) return alert('All fields required');
-
-            await window.FirebaseSDK.setDoc(window.FirebaseSDK.doc(db, "users", uid), {
-                userId: uid, email, password: pass, status: 'pending', passkey: ''
-            });
-            alert('Registered successfully! Waiting for admin approval.');
-            document.getElementById('register-form-box').classList.add('hidden');
-            document.getElementById('login-form-box').classList.remove('hidden');
+        window.logoutOwner = function() {
+            sessionStorage.removeItem('owner_logged_in');
+            document.getElementById('login-modal').classList.remove('hidden');
         };
 
-        window.handleResetWithPasskey = async function() {
-            const uid = document.getElementById('pk-userid').value.trim();
-            const pk = document.getElementById('pk-passkey').value.trim();
-            const newPass = document.getElementById('pk-newpass').value.trim();
+        window.showForgetSection = () => { document.getElementById('login-form-box').classList.add('hidden'); document.getElementById('forget-form-box').classList.remove('hidden'); };
+        window.hideForgetSection = () => { document.getElementById('forget-form-box').classList.add('hidden'); document.getElementById('login-form-box').classList.remove('hidden'); };
 
-            const docRef = window.FirebaseSDK.doc(db, "users", uid);
-            const docSnap = await window.FirebaseSDK.getDoc(docRef);
-            if(!docSnap.exists()) return alert('User not found');
-            const data = docSnap.data();
+        window.handleResetPassword = async function() {
+            const devPass = document.getElementById('forget-dev-pass').value.trim();
+            const newId = document.getElementById('forget-new-userid').value.trim();
+            const newPass = document.getElementById('forget-new-pass').value.trim();
 
-            if(data.passkey !== pk) return alert('Invalid Passkey!');
-            await window.FirebaseSDK.setDoc(docRef, { password: newPass, passkey: '' }, { merge: true });
-            alert('Password updated successfully!');
-            document.getElementById('passkey-form-box').classList.add('hidden');
-            document.getElementById('login-form-box').classList.remove('hidden');
+            if (devPass !== DEVELOPER_PASSWORD) return alert('Incorrect Developer Password!');
+            if (!newId || !newPass) return alert('Enter new ID and password.');
+
+            window.appData.ownerAuth = { userId: newId, password: newPass };
+            saveLocalStorage();
+            await window.saveSettingsToCloud();
+            alert('Owner credentials reset successfully!');
+            hideForgetSection();
         };
 
-        window.saveBillToFirebase = async function() {
-            const cust = document.getElementById('bill-cust-name').value;
-            const grand = document.getElementById('summary-grand').innerText;
-            await window.FirebaseSDK.addDoc(window.FirebaseSDK.collection(db, "bills"), {
-                customer: cust, total: grand, date: new Date().toLocaleDateString()
-            });
-            alert('Bill saved to Firebase Cloud!');
-        };
-
-        window.saveCompanyProfile = async function() {
-            const name = document.getElementById('set-comp-name').value;
-            const address = document.getElementById('set-comp-address').value;
-            await window.FirebaseSDK.setDoc(window.FirebaseSDK.doc(db, "settings", "company"), { name, address });
-            alert('Company profile saved to Cloud!');
+        window.saveFirebaseConfig = async function() {
+            const config = {
+                apiKey: document.getElementById('fb-apiKey').value.trim(),
+                authDomain: document.getElementById('fb-authDomain').value.trim(),
+                projectId: document.getElementById('fb-projectId').value.trim(),
+                storageBucket: document.getElementById('fb-storageBucket').value.trim(),
+                messagingSenderId: document.getElementById('fb-messagingSenderId').value.trim(),
+                appId: document.getElementById('fb-appId').value.trim()
+            };
+            window.appData.firebaseConfig = config;
+            saveLocalStorage();
+            window.initFirebaseConnection(config);
+            alert('Firebase connected successfully!');
         };
     </script>
+
+    <!-- Additional UI & Billing Logic -->
     <script>
-        // UI Helpers
         window.switchTab = function(tabId) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
             document.getElementById(`section-${tabId}`).classList.remove('hidden');
-        };
-        window.showRegisterSection = () => { document.getElementById('login-form-box').classList.add('hidden'); document.getElementById('register-form-box').classList.remove('hidden'); };
-        window.hideRegisterSection = () => { document.getElementById('register-form-box').classList.add('hidden'); document.getElementById('login-form-box').classList.remove('hidden'); };
-        window.showPasskeySection = () => { document.getElementById('login-form-box').classList.add('hidden'); document.getElementById('passkey-form-box').classList.remove('hidden'); };
-        window.hidePasskeySection = () => { document.getElementById('passkey-form-box').classList.add('hidden'); document.getElementById('login-form-box').classList.remove('hidden'); };
-        window.logoutUser = () => { sessionStorage.clear(); location.reload(); };
-        window.addInvoiceRow = function() {
-            const tbody = document.getElementById('invoice-items-body');
-            tbody.innerHTML += `<tr class="border-b"><td class="p-2"><input type="text" value="Item" class="border p-1 text-sm w-full"></td><td class="p-2"><input type="number" value="1" class="border p-1 text-sm w-16" oninput="calculate()"></td><td class="p-2"><input type="number" value="100" class="border p-1 text-sm w-20" oninput="calculate()"></td><td class="p-2 text-right font-bold item-amt">₹100</td><td class="p-2 text-center"><button onclick="this.closest('tr').remove(); calculate();" class="text-red-500"><i class="fa-solid fa-trash"></i></button></td></tr>`;
-            calculate();
-        };
-        window.calculate = function() {
-            let total = 0;
-            document.querySelectorAll('#invoice-items-body tr').forEach(row => {
-                let q = parseFloat(row.querySelector('input[type=number]').value) || 0;
-                let r = row.querySelectorAll('input[type=number]')[1].value || 0;
-                let amt = q * r;
-                row.querySelector('.item-amt').innerText = '₹' + amt;
-                total += amt;
+            ['billing', 'reports', 'settings'].forEach(t => {
+                const btn = document.getElementById(`tab-${t}`);
+                if (!btn) return;
+                if (t === tabId) {
+                    btn.className = t === 'billing' ? "px-4 py-2 rounded-lg font-medium bg-emerald-600 text-white shadow" : "px-4 py-2 rounded-lg font-medium bg-indigo-700 text-white";
+                } else {
+                    btn.className = "px-4 py-2 rounded-lg font-medium bg-indigo-900 text-indigo-200 hover:text-white";
+                }
             });
-            document.getElementById('summary-grand').innerText = '₹' + total;
-            document.getElementById('print-grand').innerText = '₹' + total;
+            if (tabId === 'billing' && !document.getElementById('editing-bill-id').value) initBillingForm();
         };
+
+        window.clickNewBillTab = () => { resetBillingForm(); switchTab('billing'); };
+
+        window.initBillingForm = function() {
+            document.getElementById('nav-company-name').innerText = window.appData.company.name;
+            document.getElementById('bill-date').valueAsDate = new Date();
+            const d = new Date();
+            const fy = d.getMonth() + 1 >= 4 ? `${d.getFullYear()}-${d.getFullYear()+1}` : `${d.getFullYear()-1}-${d.getFullYear()}`;
+            document.getElementById('bill-fin-year').value = fy;
+            const fyBills = window.appData.bills.filter(b => b.finYear === fy);
+            document.getElementById('bill-number').value = `${fy}/A${fyBills.length + 1}`;
+
+            const custSelect = document.getElementById('bill-customer-select');
+            custSelect.innerHTML = '<option value="">-- Select Customer --</option>';
+            window.appData.customers.forEach(c => { custSelect.innerHTML += `<option value="${c.id}">${c.name}</option>`; });
+            document.getElementById('bill-terms').value = window.appData.defaultTerms;
+
+            if (document.getElementById('invoice-items-body').rows.length === 0) addInvoiceRow();
+            else liveUpdatePreview();
+        };
+
+        window.resetBillingForm = function() {
+            document.getElementById('editing-bill-id').value = "";
+            document.getElementById('form-mode-title').innerText = "Generate Invoice";
+            document.getElementById('save-btn-text').innerText = "Save Bill";
+            document.getElementById('cancel-edit-btn').classList.add('hidden');
+            document.getElementById('search-bill-no-input').value = "";
+            document.getElementById('invoice-items-body').innerHTML = "";
+            document.getElementById('bill-cust-name').value = "";
+            document.getElementById('bill-cust-address').value = "";
+            initBillingForm();
+        };
+
+        window.addInvoiceRow = function(itemData = null) {
+            const tbody = document.getElementById('invoice-items-body');
+            const row = tbody.insertRow();
+            row.className = "border-b border-slate-100";
+            let opts = '<option value="">-- Select Item --</option>';
+            window.appData.items.forEach(i => {
+                const sel = itemData && itemData.name === i.name ? 'selected' : '';
+                opts += `<option value="${i.id}" ${sel}>${i.name} (${i.unit}) - ₹${i.rate}</option>`;
+            });
+
+            row.innerHTML = `
+                <td class="p-3 text-center sr-col">${tbody.rows.length}</td>
+                <td class="p-3"><select onchange="onItemRowSelect(this)" class="w-full border rounded p-1 text-sm mb-1">${opts}</select><input type="text" value="${itemData ? itemData.name : ''}" class="item-name w-full border rounded p-1 text-sm" oninput="liveUpdatePreview()"></td>
+                <td class="p-3"><input type="number" step="0.001" value="${itemData ? itemData.qty : 1}" class="item-qty w-full border rounded p-1 text-sm" oninput="calculateTotals(); liveUpdatePreview()"></td>
+                <td class="p-3"><input type="text" value="${itemData ? itemData.unit : 'Kg'}" class="item-unit w-full border rounded p-1 text-sm"></td>
+                <td class="p-3"><input type="number" step="0.01" value="${itemData ? itemData.rate : 0}" class="item-rate w-full border rounded p-1 text-sm" oninput="calculateTotals(); liveUpdatePreview()"></td>
+                <td class="p-3"><input type="number" step="0.01" value="${itemData ? itemData.gst : 5}" class="item-gst w-full border rounded p-1 text-sm" oninput="calculateTotals(); liveUpdatePreview()"></td>
+                <td class="p-3 text-right font-semibold item-amount">₹0.00</td>
+                <td class="p-3 text-center"><button onclick="this.closest('tr').remove(); calculateTotals(); liveUpdatePreview();" class="text-red-500"><i class="fa-solid fa-trash"></i></button></td>
+            `;
+            calculateTotals();
+            liveUpdatePreview();
+        };
+
+        window.onItemRowSelect = function(sel) {
+            const item = window.appData.items.find(i => i.id === sel.value);
+            if (item) {
+                const r = sel.closest('tr');
+                r.querySelector('.item-name').value = item.name;
+                r.querySelector('.item-unit').value = item.unit || 'Kg';
+                r.querySelector('.item-rate').value = item.rate;
+                r.querySelector('.item-gst').value = item.gst;
+                calculateTotals();
+                liveUpdatePreview();
+            }
+        };
+
+        window.calculateTotals = function() {
+            let sub = 0, gstTot = 0, breakdown = {};
+            document.querySelectorAll('#invoice-items-body tr').forEach(r => {
+                const q = parseFloat(r.querySelector('.item-qty').value) || 0;
+                const rate = parseFloat(r.querySelector('.item-rate').value) || 0;
+                const gRate = parseFloat(r.querySelector('.item-gst').value) || 0;
+                const amt = q * rate;
+                sub += amt;
+                const itemGst = amt * (gRate / 100);
+                gstTot += itemGst;
+                if (gRate > 0) breakdown[gRate] = (breakdown[gRate] || 0) + itemGst;
+                r.querySelector('.item-amount').innerText = `₹${amt.toFixed(2)}`;
+            });
+            const grand = Math.round(sub + gstTot);
+            const round = grand - (sub + gstTot);
+            document.getElementById('summary-subtotal').innerText = `₹${sub.toFixed(2)}`;
+            document.getElementById('summary-gst').innerText = `₹${gstTot.toFixed(2)}`;
+            document.getElementById('summary-round').innerText = `₹${round.toFixed(2)}`;
+            document.getElementById('summary-grand').innerText = `₹${grand.toFixed(2)}`;
+            window.currentCalc = { sub, gstTot, round, grand, breakdown };
+        };
+
+        window.collectBillObject = function() {
+            calculateTotals();
+            const items = [];
+            document.querySelectorAll('#invoice-items-body tr').forEach(r => {
+                items.push({
+                    name: r.querySelector('.item-name').value,
+                    qty: parseFloat(r.querySelector('.item-qty').value) || 0,
+                    unit: r.querySelector('.item-unit').value,
+                    rate: parseFloat(r.querySelector('.item-rate').value) || 0,
+                    gst: parseFloat(r.querySelector('.item-gst').value) || 0,
+                    amount: (parseFloat(r.querySelector('.item-qty').value) || 0) * (parseFloat(r.querySelector('.item-rate').value) || 0)
+                });
+            });
+            return {
+                id: document.getElementById('editing-bill-id').value || ('b_' + Date.now()),
+                billNumber: document.getElementById('bill-number').value,
+                finYear: document.getElementById('bill-fin-year').value,
+                date: document.getElementById('bill-date').value,
+                customerName: document.getElementById('bill-cust-name').value,
+                customerAddress: document.getElementById('bill-cust-address').value,
+                paymentMode: document.getElementById('bill-pay-mode').value,
+                checkNumber: document.getElementById('bill-check-num').value,
+                signatureOption: document.getElementById('bill-sig-option').value,
+                terms: document.getElementById('bill-terms').value,
+                items,
+                subtotal: window.currentCalc.sub,
+                gstTotal: window.currentCalc.gstTot,
+                roundoff: window.currentCalc.round,
+                grandTotal: window.currentCalc.grand,
+                gstBreakdown: window.currentCalc.breakdown
+            };
+        };
+
         window.liveUpdatePreview = function() {
-            document.getElementById('print-cust-name').innerText = document.getElementById('bill-cust-name').value;
+            const bill = collectBillObject();
+            document.getElementById('print-company-name').innerText = window.appData.company.name;
+            document.getElementById('print-company-address').innerText = window.appData.company.address;
+            document.getElementById('print-company-gst').innerText = window.appData.company.gstn;
+            document.getElementById('print-company-mobile').innerText = window.appData.company.mobile;
+            document.getElementById('print-company-email').innerText = window.appData.company.email;
+            document.getElementById('print-bill-no').innerText = bill.billNumber;
+            document.getElementById('print-bill-date').innerText = bill.date;
+            document.getElementById('print-fin-year').innerText = bill.finYear;
+            document.getElementById('print-cust-name').innerText = bill.customerName;
+            document.getElementById('print-cust-address').innerText = bill.customerAddress;
+            document.getElementById('print-pay-mode').innerText = bill.paymentMode;
+
+            const tbody = document.getElementById('print-items-body');
+            tbody.innerHTML = '';
+            bill.items.forEach((i, idx) => {
+                tbody.innerHTML += `<tr class="border-b"><td class="p-2 text-center">${idx+1}</td><td class="p-2">${i.name}</td><td class="p-2 text-center">${i.qty}</td><td class="p-2 text-center">${i.unit}</td><td class="p-2 text-right">₹${i.rate.toFixed(2)}</td><td class="p-2 text-center">${i.gst}%</td><td class="p-2 text-right font-semibold">₹${i.amount.toFixed(2)}</td></tr>`;
+            });
+
+            document.getElementById('print-terms').innerText = bill.terms;
+            document.getElementById('print-subtotal').innerText = `₹${bill.subtotal.toFixed(2)}`;
+            document.getElementById('print-gst').innerText = `₹${bill.gstTotal.toFixed(2)}`;
+            document.getElementById('print-round').innerText = `₹${bill.roundoff.toFixed(2)}`;
+            document.getElementById('print-grand').innerText = `₹${bill.grandTotal.toFixed(2)}`;
         };
-        window.onload = function() { addInvoiceRow(); document.getElementById('bill-date').valueAsDate = new Date(); };
+
+        window.saveBill = async function() {
+            const bill = collectBillObject();
+            const idx = window.appData.bills.findIndex(b => b.id === bill.id);
+            if (idx !== -1) window.appData.bills[idx] = bill;
+            else window.appData.bills.push(bill);
+
+            saveLocalStorage();
+            if (window.db) {
+                await window.FirebaseSDK.setDoc(window.FirebaseSDK.doc(window.db, "bills", bill.id), bill);
+            }
+            alert('Bill saved successfully!');
+        };
+
+        window.printBill = () => { liveUpdatePreview(); window.print(); };
+
+        window.loadSettingsUI = function() {
+            document.getElementById('set-comp-name').value = window.appData.company.name;
+            document.getElementById('set-comp-gst').value = window.appData.company.gstn;
+            document.getElementById('set-comp-mobile').value = window.appData.company.mobile;
+            document.getElementById('set-comp-email').value = window.appData.company.email;
+            document.getElementById('set-comp-address').value = window.appData.company.address;
+            document.getElementById('set-comp-logo').value = window.appData.company.logo;
+            document.getElementById('master-default-terms').value = window.appData.defaultTerms;
+
+            if (window.appData.firebaseConfig) {
+                document.getElementById('fb-apiKey').value = window.appData.firebaseConfig.apiKey || '';
+                document.getElementById('fb-authDomain').value = window.appData.firebaseConfig.authDomain || '';
+                document.getElementById('fb-projectId').value = window.appData.firebaseConfig.projectId || '';
+                document.getElementById('fb-storageBucket').value = window.appData.firebaseConfig.storageBucket || '';
+                document.getElementById('fb-messagingSenderId').value = window.appData.firebaseConfig.messagingSenderId || '';
+                document.getElementById('fb-appId').value = window.appData.firebaseConfig.appId || '';
+            }
+            renderMasterCustomerTable();
+            renderMasterItemTable();
+        };
+
+        window.saveCompanyProfile = async function() {
+            window.appData.company = {
+                name: document.getElementById('set-comp-name').value,
+                gstn: document.getElementById('set-comp-gst').value,
+                mobile: document.getElementById('set-comp-mobile').value,
+                email: document.getElementById('set-comp-email').value,
+                address: document.getElementById('set-comp-address').value,
+                logo: document.getElementById('set-comp-logo').value
+            };
+            saveLocalStorage();
+            await window.saveSettingsToCloud();
+            alert('Company profile updated!');
+            liveUpdatePreview();
+        };
+
+        window.saveCustomerMaster = async function() {
+            const name = document.getElementById('master-cust-name').value;
+            const address = document.getElementById('master-cust-addr').value;
+            if (!name) return alert('Customer name required');
+            const c = { id: 'c_' + Date.now(), name, address };
+            window.appData.customers.push(c);
+            saveLocalStorage();
+            if (window.db) await window.FirebaseSDK.setDoc(window.FirebaseSDK.doc(window.db, "customers", c.id), c);
+            document.getElementById('master-cust-name').value = '';
+            document.getElementById('master-cust-addr').value = '';
+            renderMasterCustomerTable();
+            initBillingForm();
+        };
+
+        window.renderMasterCustomerTable = function() {
+            const tb = document.getElementById('master-customer-table');
+            tb.innerHTML = '';
+            window.appData.customers.forEach(c => {
+                tb.innerHTML += `<tr class="border-b"><td class="p-3 font-medium">${c.name}</td><td class="p-3">${c.address}</td><td class="p-3 text-center"><button onclick="deleteCust('${c.id}')" class="text-red-500"><i class="fa-solid fa-trash"></i></button></td></tr>`;
+            });
+        };
+
+        window.deleteCust = async function(id) {
+            window.appData.customers = window.appData.customers.filter(c => c.id !== id);
+            saveLocalStorage();
+            if (window.db) await window.FirebaseSDK.deleteDoc(window.FirebaseSDK.doc(window.db, "customers", id));
+            renderMasterCustomerTable();
+        };
+
+        window.saveItemMaster = async function() {
+            const name = document.getElementById('master-item-name').value;
+            const unit = document.getElementById('master-item-unit').value || 'Kg';
+            const rate = parseFloat(document.getElementById('master-item-rate').value) || 0;
+            const gst = parseFloat(document.getElementById('master-item-gst').value) || 0;
+            if (!name) return alert('Item name required');
+            const i = { id: 'i_' + Date.now(), name, unit, rate, gst };
+            window.appData.items.push(i);
+            saveLocalStorage();
+            if (window.db) await window.FirebaseSDK.setDoc(window.FirebaseSDK.doc(window.db, "items", i.id), i);
+            document.getElementById('master-item-name').value = '';
+            document.getElementById('master-item-rate').value = '';
+            renderMasterItemTable();
+        };
+
+        window.renderMasterItemTable = function() {
+            const tb = document.getElementById('master-item-table');
+            tb.innerHTML = '';
+            window.appData.items.forEach(i => {
+                tb.innerHTML += `<tr class="border-b"><td class="p-3 font-medium">${i.name}</td><td class="p-3">${i.unit}</td><td class="p-3">₹${i.rate}</td><td class="p-3">${i.gst}%</td><td class="p-3 text-center"><button onclick="deleteItm('${i.id}')" class="text-red-500"><i class="fa-solid fa-trash"></i></button></td></tr>`;
+            });
+        };
+
+        window.deleteItm = async function(id) {
+            window.appData.items = window.appData.items.filter(i => i.id !== id);
+            saveLocalStorage();
+            if (window.db) await window.FirebaseSDK.deleteDoc(window.FirebaseSDK.doc(window.db, "items", id));
+            renderMasterItemTable();
+        };
+
+        window.requestUnlockFirebase = function() {
+            const pwd = prompt("Enter Developer Password:");
+            if (pwd === window.DEVELOPER_PASSWORD) {
+                document.querySelectorAll('.fb-field').forEach(el => { el.classList.remove('bg-slate-100'); el.removeAttribute('readonly'); });
+                document.getElementById('save-fb-btn').classList.remove('hidden');
+                document.getElementById('unlock-fb-btn').classList.add('hidden');
+                alert('Unlocked.');
+            }
+        };
+
+        window.toggleReportFilters = () => {};
+        window.generateReport = () => {};
+        window.downloadReportPDF = () => window.print();
+        window.loadBillForEditing = () => {};
     </script>
 </body>
 </html>
