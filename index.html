@@ -3,16 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Professional Billing Web Application - Cloud Synced</title>
+    <title>Professional Billing Web Application</title>
     <!-- Tailwind CSS for modern styling -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Firebase SDK (Modular via CDN) -->
+    <!-- Firebase SDK (Modular via CDN for GitHub Pages compatibility) -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, getDocs, doc, setDoc, deleteDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-        window.FirebaseSDK = { initializeApp, getFirestore, collection, addDoc, getDocs, doc, setDoc, deleteDoc, getDoc };
+        import { getFirestore, collection, addDoc, getDocs, doc, setDoc, deleteDoc, query, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        window.FirebaseSDK = { initializeApp, getFirestore, collection, addDoc, getDocs, doc, setDoc, deleteDoc, query, where };
     </script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
@@ -21,21 +21,23 @@
             body * { visibility: hidden !important; }
             #printable-bill, #printable-bill * { visibility: visible !important; }
             #printable-bill { position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 10mm; background: white; box-shadow: none; z-index: 99999; display: block !important; }
+            
             #printable-report, #printable-report * { visibility: visible !important; }
             #printable-report { position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 10mm; background: white; box-shadow: none; z-index: 99999; display: block !important; }
+            
             .no-print { display: none !important; }
         }
     </style>
 </head>
 <body class="bg-slate-100 text-slate-800 antialiased min-h-screen flex flex-col">
 
-    <!-- SPLASH SCREEN -->
+    <!-- SPLASH SCREEN / ANIMATION OVERLAY -->
     <div id="splash-screen" class="fixed inset-0 bg-indigo-950 z-50 flex flex-col items-center justify-center text-white transition-opacity duration-1000">
         <div class="animate-bounce mb-4">
             <i class="fa-solid fa-file-invoice-dollar text-6xl text-indigo-400"></i>
         </div>
         <h1 id="splash-title" class="text-3xl font-extrabold tracking-wider opacity-0 transition-opacity duration-1000">Mahamantra Web Services</h1>
-        <p class="text-xs text-indigo-300 mt-2 tracking-widest uppercase">Loading Cloud Application...</p>
+        <p class="text-xs text-indigo-300 mt-2 tracking-widest uppercase">Loading Application...</p>
     </div>
 
     <!-- LOGIN MODAL -->
@@ -66,19 +68,19 @@
             <div id="forget-form-box" class="space-y-4 hidden">
                 <div class="bg-amber-50 p-3 rounded-lg border border-amber-200 text-xs text-amber-800">
                     <p class="font-bold mb-0.5"><i class="fa-solid fa-triangle-exclamation"></i> Reset Password Notice</p>
-                    Enter Developer Password along with your new owner credentials to reset.
+                    Enter Developer Password along with your new owner password to reset it.
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Developer Master Password</label>
-                    <input type="password" id="forget-dev-pass" placeholder="Enter Developer Password" class="w-full border rounded-lg p-3 text-sm focus:outline-none">
+                    <input type="password" id="forget-dev-pass" placeholder="Enter Developer Password" class="w-full border rounded-lg p-3 text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">New Owner ID</label>
-                    <input type="text" id="forget-new-userid" placeholder="Enter New ID" class="w-full border rounded-lg p-3 text-sm focus:outline-none">
+                    <input type="text" id="forget-new-userid" placeholder="Enter New ID" class="w-full border rounded-lg p-3 text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">New Owner Password</label>
-                    <input type="password" id="forget-new-pass" placeholder="Enter New Password" class="w-full border rounded-lg p-3 text-sm focus:outline-none">
+                    <input type="password" id="forget-new-pass" placeholder="Enter New Password" class="w-full border rounded-lg p-3 text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
                 </div>
                 <div class="flex space-x-2">
                     <button onclick="handleResetPassword()" class="flex-1 bg-amber-600 hover:bg-amber-700 text-white py-3 rounded-lg font-bold text-sm transition shadow-md">Reset Password</button>
@@ -115,14 +117,14 @@
     <!-- Main Container -->
     <main class="flex-grow max-w-7xl w-full mx-auto px-4 py-6">
 
-        <!-- Firebase Warning Banner -->
+        <!-- Firebase Config Banner if not set -->
         <div id="firebase-warning" class="bg-amber-50 border-l-4 border-amber-500 p-4 mb-6 rounded-r-lg shadow-sm no-print">
             <div class="flex items-center justify-between">
                 <div class="flex items-center space-x-3">
                     <i class="fa-solid fa-triangle-exclamation text-amber-500 text-xl"></i>
-                    <p class="text-sm text-amber-700 font-medium">Configure your Firebase settings below to enable cross-device syncing.</p>
+                    <p class="text-sm text-amber-700 font-medium">Firebase is not configured. Data is currently saved in local storage. Configure Firebase in Settings to sync across devices.</p>
                 </div>
-                <button onclick="switchTab('settings')" class="text-xs bg-amber-600 text-white px-3 py-1.5 rounded font-semibold hover:bg-amber-700 transition">Configure</button>
+                <button onclick="switchTab('settings')" class="text-xs bg-amber-600 text-white px-3 py-1.5 rounded font-semibold hover:bg-amber-700 transition">Configure Now</button>
             </div>
         </div>
 
@@ -139,21 +141,22 @@
                     </div>
                     
                     <div class="flex items-center space-x-4">
+                        <!-- Search / Load Existing Bill By Number -->
                         <div class="flex items-center space-x-1">
                             <input type="text" id="search-bill-no-input" placeholder="Search Bill No (e.g. A1)" class="border border-slate-300 rounded px-2.5 py-1.5 text-sm w-40">
                             <button onclick="loadBillForEditing()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded text-sm font-semibold transition" title="Edit Existing Bill"><i class="fa-solid fa-search"></i></button>
                         </div>
                         <div>
                             <label class="block text-xs font-semibold text-slate-500 uppercase">Financial Year</label>
-                            <input type="text" id="bill-fin-year" class="mt-1 bg-slate-100 border rounded px-3 py-1.5 text-sm font-bold w-32" readonly>
+                            <input type="text" id="bill-fin-year" class="mt-1 bg-slate-100 border border-slate-300 rounded px-3 py-1.5 text-sm font-bold text-slate-700 w-32" readonly>
                         </div>
                         <div>
                             <label class="block text-xs font-semibold text-slate-500 uppercase">Bill Number</label>
-                            <input type="text" id="bill-number" class="mt-1 bg-slate-100 border rounded px-3 py-1.5 text-sm font-bold text-indigo-600 w-32" readonly>
+                            <input type="text" id="bill-number" class="mt-1 bg-slate-100 border border-slate-300 rounded px-3 py-1.5 text-sm font-bold text-indigo-600 w-32" readonly>
                         </div>
                         <div>
                             <label class="block text-xs font-semibold text-slate-500 uppercase">Date</label>
-                            <input type="date" id="bill-date" class="mt-1 border rounded px-3 py-1.5 text-sm">
+                            <input type="date" id="bill-date" class="mt-1 border border-slate-300 rounded px-3 py-1.5 text-sm text-slate-700">
                         </div>
                     </div>
                 </div>
@@ -162,24 +165,24 @@
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
                     <div>
                         <label class="block text-sm font-semibold text-slate-700 mb-1">Select Customer</label>
-                        <select id="bill-customer-select" onchange="onCustomerSelect()" class="w-full border rounded-lg p-2.5 text-sm">
+                        <select id="bill-customer-select" onchange="onCustomerSelect()" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
                             <option value="">-- Select Customer --</option>
                         </select>
                     </div>
                     <div>
                         <label class="block text-sm font-semibold text-slate-700 mb-1">Customer Name</label>
-                        <input type="text" id="bill-cust-name" placeholder="Customer Name" class="w-full border rounded-lg p-2.5 text-sm" oninput="liveUpdatePreview()">
+                        <input type="text" id="bill-cust-name" placeholder="Customer Name" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm" oninput="liveUpdatePreview()">
                     </div>
                     <div>
                         <label class="block text-sm font-semibold text-slate-700 mb-1">Customer Address</label>
-                        <input type="text" id="bill-cust-address" placeholder="Customer Address" class="w-full border rounded-lg p-2.5 text-sm" oninput="liveUpdatePreview()">
+                        <input type="text" id="bill-cust-address" placeholder="Customer Address" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm" oninput="liveUpdatePreview()">
                     </div>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
                     <div>
                         <label class="block text-sm font-semibold text-slate-700 mb-1">Payment Mode</label>
-                        <select id="bill-pay-mode" onchange="toggleCheckNumber(); liveUpdatePreview();" class="w-full border rounded-lg p-2.5 text-sm">
+                        <select id="bill-pay-mode" onchange="toggleCheckNumber(); liveUpdatePreview();" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm">
                             <option value="Cash">Cash</option>
                             <option value="Online">Online / UPI</option>
                             <option value="Cheque">Cheque</option>
@@ -187,18 +190,18 @@
                     </div>
                     <div id="check-number-container" class="hidden">
                         <label class="block text-sm font-semibold text-slate-700 mb-1">Cheque Number</label>
-                        <input type="text" id="bill-check-num" placeholder="Enter Cheque No" class="w-full border rounded-lg p-2.5 text-sm" oninput="liveUpdatePreview()">
+                        <input type="text" id="bill-check-num" placeholder="Enter Cheque No" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm" oninput="liveUpdatePreview()">
                     </div>
                     <div>
                         <label class="block text-sm font-semibold text-slate-700 mb-1">Signature Option</label>
-                        <select id="bill-sig-option" onchange="liveUpdatePreview()" class="w-full border rounded-lg p-2.5 text-sm">
-                            <option value="system">This is a system generated bill</option>
-                            <option value="manual">Manual Signature</option>
+                        <select id="bill-sig-option" onchange="liveUpdatePreview()" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm">
+                            <option value="system">This is a system generated bill, signature not required</option>
+                            <option value="manual">Manual Signature (For [Company Name])</option>
                         </select>
                     </div>
                 </div>
 
-                <!-- Items Table -->
+                <!-- Items Table for Creation -->
                 <div class="mb-6 overflow-x-auto">
                     <table class="w-full text-left border-collapse" id="invoice-items-table">
                         <thead>
@@ -213,30 +216,45 @@
                                 <th class="p-3 w-16 text-center">Action</th>
                             </tr>
                         </thead>
-                        <tbody id="invoice-items-body" class="text-sm divide-y"></tbody>
+                        <tbody id="invoice-items-body" class="text-sm divide-y divide-slate-200">
+                            <!-- Dynamic Rows -->
+                        </tbody>
                     </table>
-                    <button onclick="addInvoiceRow()" class="mt-3 bg-indigo-50 text-indigo-700 border hover:bg-indigo-100 px-4 py-2 rounded-lg text-sm font-semibold flex items-center space-x-2">
+                    <button onclick="addInvoiceRow()" class="mt-3 bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 px-4 py-2 rounded-lg text-sm font-semibold transition flex items-center space-x-2">
                         <i class="fa-solid fa-plus"></i> <span>Add Item Row</span>
                     </button>
                 </div>
 
+                <!-- Calculation Summary & Action Buttons -->
                 <div class="flex flex-col md:flex-row justify-between items-start md:items-center pt-4 border-t gap-4">
                     <div class="w-full md:w-1/2">
-                        <label class="block text-sm font-semibold text-slate-700 mb-1">Terms & Conditions</label>
-                        <textarea id="bill-terms" rows="3" class="w-full border rounded-lg p-2.5 text-sm" oninput="liveUpdatePreview()"></textarea>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">Terms & Conditions / Notes</label>
+                        <textarea id="bill-terms" rows="3" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm text-slate-600" oninput="liveUpdatePreview()"></textarea>
                     </div>
-                    <div class="w-full md:w-1/3 bg-slate-50 p-4 rounded-xl border space-y-2 text-sm">
-                        <div class="flex justify-between"><span>Subtotal:</span><span id="summary-subtotal" class="font-semibold">₹0.00</span></div>
-                        <div class="flex justify-between"><span>GST Total:</span><span id="summary-gst" class="font-semibold">₹0.00</span></div>
-                        <div class="flex justify-between"><span>Roundoff:</span><span id="summary-round" class="font-semibold">₹0.00</span></div>
-                        <div class="flex justify-between text-lg font-bold border-t pt-2"><span>Grand Total:</span><span id="summary-grand" class="text-indigo-600">₹0.00</span></div>
+                    <div class="w-full md:w-1/3 bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2 text-sm">
+                        <div class="flex justify-between text-slate-600">
+                            <span>Subtotal:</span>
+                            <span id="summary-subtotal" class="font-semibold">₹0.00</span>
+                        </div>
+                        <div class="flex justify-between text-slate-600">
+                            <span>GST Total:</span>
+                            <span id="summary-gst" class="font-semibold">₹0.00</span>
+                        </div>
+                        <div class="flex justify-between text-slate-600">
+                            <span>Roundoff:</span>
+                            <span id="summary-round" class="font-semibold">₹0.00</span>
+                        </div>
+                        <div class="flex justify-between text-lg font-bold text-slate-900 border-t pt-2">
+                            <span>Grand Total:</span>
+                            <span id="summary-grand" class="text-indigo-600">₹0.00</span>
+                        </div>
                         <div class="flex space-x-3 pt-3">
                             <input type="hidden" id="editing-bill-id" value="">
                             <button onclick="saveBill()" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-lg font-semibold transition shadow flex items-center justify-center space-x-2">
                                 <i class="fa-solid fa-floppy-disk"></i> <span id="save-btn-text">Save Bill</span>
                             </button>
                             <button onclick="printBill()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-2.5 rounded-lg font-semibold transition shadow flex items-center justify-center space-x-2">
-                                <i class="fa-solid fa-print"></i> <span>Print</span>
+                                <i class="fa-solid fa-print"></i> <span>Print Bill</span>
                             </button>
                         </div>
                     </div>
@@ -245,44 +263,95 @@
 
             <!-- LIVE PREVIEW CONTAINER -->
             <div class="mt-8">
-                <h3 class="text-md font-bold text-slate-700 mb-2 no-print"><i class="fa-solid fa-eye text-indigo-600"></i> Live Bill Preview</h3>
-                <div id="printable-bill" class="bg-white p-8 max-w-[210mm] mx-auto text-slate-800 text-sm shadow-lg rounded-xl border">
+                <h3 class="text-md font-bold text-slate-700 mb-2 flex items-center space-x-2 no-print">
+                    <i class="fa-solid fa-eye text-indigo-600"></i> <span>Live Bill Preview</span>
+                </h3>
+                <div id="printable-bill" class="bg-white p-8 max-w-[210mm] mx-auto text-slate-800 text-sm shadow-lg rounded-xl border border-slate-200">
                     <div class="flex justify-between items-start border-b-2 border-indigo-900 pb-6 mb-6">
                         <div class="flex items-center space-x-4">
                             <img id="print-logo" src="" alt="Logo" class="w-20 h-20 object-contain hidden">
                             <div>
                                 <h2 id="print-company-name" class="text-2xl font-bold text-indigo-900">Company Name</h2>
-                                <p id="print-company-address" class="text-slate-600 text-xs mt-1"></p>
+                                <p id="print-company-address" class="text-slate-600 text-xs mt-1">Address line...</p>
                                 <p class="text-slate-600 text-xs mt-0.5">GSTN: <span id="print-company-gst" class="font-semibold"></span> | Mobile: <span id="print-company-mobile" class="font-semibold"></span></p>
+                                <p class="text-slate-600 text-xs">Email: <span id="print-company-email" class="font-semibold"></span></p>
                             </div>
                         </div>
                         <div class="text-right">
-                            <h1 class="text-3xl font-extrabold text-indigo-900">TAX INVOICE</h1>
+                            <h1 class="text-3xl font-extrabold text-indigo-900 tracking-wider">TAX INVOICE</h1>
                             <p class="text-xs font-bold text-slate-500 mt-1">Invoice No: <span id="print-bill-no" class="text-indigo-600"></span></p>
                             <p class="text-xs text-slate-500">Date: <span id="print-bill-date" class="font-semibold"></span></p>
+                            <p class="text-xs text-slate-500">Payment Mode: <span id="print-pay-mode" class="font-semibold"></span> <span id="print-check-container" class="hidden">(Cheque No: <span id="print-check-no"></span>)</span></p>
                         </div>
                     </div>
-                    <div class="grid grid-cols-2 gap-6 mb-6 bg-slate-50 p-4 rounded-lg border">
+
+                    <div class="grid grid-cols-2 gap-6 mb-6 bg-slate-50 p-4 rounded-lg border border-slate-200">
                         <div>
                             <h3 class="text-xs font-bold uppercase text-slate-500 mb-1">Billed To:</h3>
-                            <p id="print-cust-name" class="font-bold text-base"></p>
-                            <p id="print-cust-address" class="text-slate-600 text-xs"></p>
+                            <p id="print-cust-name" class="font-bold text-slate-800 text-base"></p>
+                            <p id="print-cust-address" class="text-slate-600 text-xs mt-0.5"></p>
+                        </div>
+                        <div class="text-right">
+                            <h3 class="text-xs font-bold uppercase text-slate-500 mb-1">Financial Year:</h3>
+                            <p id="print-fin-year" class="font-bold text-slate-800"></p>
                         </div>
                     </div>
+
                     <table class="w-full text-left border-collapse mb-6">
                         <thead>
-                            <tr class="bg-indigo-900 text-white text-xs uppercase">
-                                <th class="p-2.5 text-center">Sr</th><th class="p-2.5">Item</th><th class="p-2.5 text-center">Qty</th><th class="p-2.5 text-center">Unit</th><th class="p-2.5 text-right">Rate</th><th class="p-2.5 text-center">GST</th><th class="p-2.5 text-right">Amount</th>
+                            <tr class="bg-indigo-900 text-white text-xs uppercase font-semibold">
+                                <th class="p-2.5 text-center w-10">Sr</th>
+                                <th class="p-2.5">Item Description</th>
+                                <th class="p-2.5 text-center w-20">Qty</th>
+                                <th class="p-2.5 text-center w-20">Unit</th>
+                                <th class="p-2.5 text-right w-24">Rate (₹)</th>
+                                <th class="p-2.5 text-center w-16">GST</th>
+                                <th class="p-2.5 text-right w-28">Amount (₹)</th>
                             </tr>
                         </thead>
-                        <tbody id="print-items-body" class="divide-y text-xs"></tbody>
+                        <tbody id="print-items-body" class="divide-y divide-slate-200 text-xs">
+                            <!-- Populated dynamically -->
+                        </tbody>
                     </table>
-                    <div class="flex justify-between border-t pt-4 text-xs">
-                        <div class="w-1/2 pr-4"><p id="print-terms" class="text-slate-600 text-xs whitespace-pre-line"></p></div>
-                        <div class="w-2/5 space-y-1">
-                            <div class="flex justify-between"><span>Subtotal:</span><span id="print-subtotal"></span></div>
-                            <div class="flex justify-between"><span>GST:</span><span id="print-gst"></span></div>
-                            <div class="flex justify-between text-sm font-bold text-indigo-900 border-t pt-2"><span>Grand Total:</span><span id="print-grand"></span></div>
+
+                    <div class="flex justify-between items-start border-t pt-4 mb-8">
+                        <div class="w-1/2 pr-4">
+                            <h4 class="font-bold text-xs uppercase text-slate-700 mb-1">Terms & Conditions:</h4>
+                            <p id="print-terms" class="text-slate-600 text-xs whitespace-pre-line leading-relaxed"></p>
+                            
+                            <div class="mt-4 border p-2.5 rounded bg-slate-50 text-[11px]">
+                                <p class="font-bold text-slate-700">GST Breakdown:</p>
+                                <div id="print-gst-breakdown" class="text-slate-600 mt-1"></div>
+                            </div>
+                        </div>
+                        <div class="w-2/5 space-y-1.5 text-xs">
+                            <div class="flex justify-between text-slate-600">
+                                <span>Subtotal:</span>
+                                <span id="print-subtotal" class="font-semibold"></span>
+                            </div>
+                            <div class="flex justify-between text-slate-600">
+                                <span>GST Total:</span>
+                                <span id="print-gst" class="font-semibold"></span>
+                            </div>
+                            <div class="flex justify-between text-slate-600">
+                                <span>Roundoff:</span>
+                                <span id="print-round" class="font-semibold"></span>
+                            </div>
+                            <div class="flex justify-between text-sm font-bold text-indigo-900 border-t pt-2">
+                                <span>Grand Total:</span>
+                                <span id="print-grand"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-12 pt-6 border-t flex justify-between items-end">
+                        <div>
+                            <p id="print-sig-system" class="text-xs italic text-slate-500">This is a system generated bill, signature not required.</p>
+                        </div>
+                        <div id="print-sig-manual" class="hidden text-center">
+                            <div class="h-16 mb-1"></div>
+                            <p class="text-xs font-bold text-slate-800 border-t pt-1 px-4">For <span id="print-sig-company"></span></p>
+                            <p class="text-[10px] text-slate-500 mt-0.5">Authorised Signatory</p>
                         </div>
                     </div>
                 </div>
@@ -293,210 +362,374 @@
         <section id="section-reports" class="tab-content hidden space-y-6">
             <div class="bg-white rounded-xl shadow-md p-6 no-print">
                 <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-xl font-bold text-slate-800">Sales & GST Reports</h2>
-                    <button onclick="downloadReportPDF()" id="pdf-download-btn" class="hidden bg-rose-600 text-white px-4 py-2 rounded-lg text-sm font-semibold">Print Report</button>
+                    <h2 class="text-xl font-bold text-slate-800 flex items-center space-x-2">
+                        <i class="fa-solid fa-chart-line text-indigo-600"></i>
+                        <span>Sales & GST Reports</span>
+                    </h2>
+                    <button onclick="downloadReportPDF()" id="pdf-download-btn" class="hidden bg-rose-600 hover:bg-rose-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition flex items-center space-x-2 shadow">
+                        <i class="fa-solid fa-print"></i> <span>Print / Save PDF Report</span>
+                    </button>
                 </div>
+
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 bg-slate-50 p-4 rounded-xl border">
                     <div>
-                        <label class="block text-xs font-semibold uppercase mb-1">Filter Type</label>
-                        <select id="report-type" onchange="toggleReportFilters()" class="w-full border rounded p-2 text-sm">
+                        <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Report Filter Type</label>
+                        <select id="report-type" onchange="toggleReportFilters()" class="w-full border border-slate-300 rounded-lg p-2 text-sm">
                             <option value="day">Day Wise</option>
                             <option value="month">Month Wise</option>
                             <option value="financial_year">Financial Year Wise</option>
                             <option value="customer">Customer Wise</option>
                         </select>
                     </div>
-                    <div id="filter-date-container"><label class="block text-xs font-semibold uppercase mb-1">Date</label><input type="date" id="report-date-input" class="w-full border rounded p-2 text-sm"></div>
-                    <div id="filter-month-container" class="hidden"><label class="block text-xs font-semibold uppercase mb-1">Month</label><input type="month" id="report-month-input" class="w-full border rounded p-2 text-sm"></div>
-                    <div id="filter-fy-container" class="hidden"><label class="block text-xs font-semibold uppercase mb-1">FY</label><input type="text" id="report-fy-input" placeholder="2025-2026" class="w-full border rounded p-2 text-sm"></div>
-                    <div id="filter-customer-container" class="hidden"><label class="block text-xs font-semibold uppercase mb-1">Customer</label><select id="report-customer-select" class="w-full border rounded p-2 text-sm"><option value="">-- Select --</option></select></div>
-                    <div class="flex items-end"><button onclick="generateReport()" class="w-full bg-indigo-600 text-white py-2 rounded font-semibold text-sm">Generate</button></div>
+                    <div id="filter-date-container">
+                        <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Select Date</label>
+                        <input type="date" id="report-date-input" class="w-full border border-slate-300 rounded-lg p-2 text-sm">
+                    </div>
+                    <div id="filter-month-container" class="hidden">
+                        <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Select Month</label>
+                        <input type="month" id="report-month-input" class="w-full border border-slate-300 rounded-lg p-2 text-sm">
+                    </div>
+                    <div id="filter-fy-container" class="hidden">
+                        <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Financial Year</label>
+                        <input type="text" id="report-fy-input" placeholder="2025-2026" class="w-full border border-slate-300 rounded-lg p-2 text-sm">
+                    </div>
+                    <div id="filter-customer-container" class="hidden">
+                        <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Select Customer</label>
+                        <select id="report-customer-select" class="w-full border border-slate-300 rounded-lg p-2 text-sm">
+                            <option value="">-- Select Customer --</option>
+                        </select>
+                    </div>
+                    <div class="flex items-end">
+                        <button onclick="generateReport()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg font-semibold text-sm transition shadow flex items-center justify-center space-x-2">
+                            <i class="fa-solid fa-magnifying-glass"></i> <span>Generate</span>
+                        </button>
+                    </div>
                 </div>
+
+                <!-- Report Summary Cards -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+                    <div class="bg-indigo-50 border border-indigo-100 p-4 rounded-xl">
+                        <p class="text-xs font-bold text-indigo-600 uppercase">Total Sales Revenue</p>
+                        <p id="rep-total-sales" class="text-2xl font-extrabold text-indigo-900 mt-1">₹0.00</p>
+                    </div>
+                    <div class="bg-emerald-50 border border-emerald-100 p-4 rounded-xl">
+                        <p class="text-xs font-bold text-emerald-600 uppercase">Total GST Collected</p>
+                        <p id="rep-total-gst" class="text-2xl font-extrabold text-emerald-900 mt-1">₹0.00</p>
+                    </div>
+                    <div class="bg-blue-50 border border-blue-100 p-4 rounded-xl">
+                        <p class="text-xs font-bold text-blue-600 uppercase">Total Bills Count</p>
+                        <p id="rep-total-bills" class="text-2xl font-extrabold text-blue-900 mt-1">0</p>
+                    </div>
+                </div>
+
+                <!-- Report Bills Table -->
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-100 text-slate-700 text-xs uppercase font-semibold border-b">
+                                <th class="p-3">Bill No</th>
+                                <th class="p-3">Date</th>
+                                <th class="p-3">Customer</th>
+                                <th class="p-3">Mode</th>
+                                <th class="p-3 text-right">Subtotal</th>
+                                <th class="p-3 text-right">GST</th>
+                                <th class="p-3 text-right">Grand Total</th>
+                                <th class="p-3 text-center w-28">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="report-table-body" class="text-sm divide-y divide-slate-200">
+                            <tr><td colspan="8" class="p-4 text-center text-slate-400">No report generated yet.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- PRINTABLE REPORT CONTAINER -->
+            <div id="printable-report" class="hidden bg-white p-8 max-w-[210mm] mx-auto text-slate-800 text-sm shadow-lg rounded-xl border border-slate-200 mt-6">
+                <div class="border-b-2 border-indigo-900 pb-4 mb-6 flex justify-between items-center">
+                    <div>
+                        <h2 id="rep-print-company" class="text-2xl font-bold text-indigo-900">Company Name</h2>
+                        <p class="text-slate-600 text-xs mt-1">Sales & GST Summary Report</p>
+                    </div>
+                    <div class="text-right text-xs text-slate-500">
+                        <p>Generated On: <span id="rep-print-date" class="font-semibold"></span></p>
+                        <p>Filter Type: <span id="rep-print-type" class="font-semibold uppercase"></span></p>
+                    </div>
+                </div>
+
                 <div class="grid grid-cols-3 gap-4 mb-6">
-                    <div class="bg-indigo-50 p-4 rounded-xl border"><p class="text-xs font-bold text-indigo-600 uppercase">Sales</p><p id="rep-total-sales" class="text-xl font-bold">₹0.00</p></div>
-                    <div class="bg-emerald-50 p-4 rounded-xl border"><p class="text-xs font-bold text-emerald-600 uppercase">GST</p><p id="rep-total-gst" class="text-xl font-bold">₹0.00</p></div>
-                    <div class="bg-blue-50 p-4 rounded-xl border"><p class="text-xs font-bold text-blue-600 uppercase">Count</p><p id="rep-total-bills" class="text-xl font-bold">0</p></div>
+                    <div class="bg-slate-50 p-3 rounded border">
+                        <p class="text-[11px] font-bold text-slate-500 uppercase">Total Sales</p>
+                        <p id="rep-print-sales" class="text-lg font-bold text-indigo-900">₹0.00</p>
+                    </div>
+                    <div class="bg-slate-50 p-3 rounded border">
+                        <p class="text-[11px] font-bold text-slate-500 uppercase">Total GST</p>
+                        <p id="rep-print-gst" class="text-lg font-bold text-emerald-700">₹0.00</p>
+                    </div>
+                    <div class="bg-slate-50 p-3 rounded border">
+                        <p class="text-[11px] font-bold text-slate-500 uppercase">Total Bills</p>
+                        <p id="rep-print-count" class="text-lg font-bold text-blue-700">0</p>
+                    </div>
                 </div>
-                <table class="w-full text-left border-collapse text-sm">
-                    <thead><tr class="bg-slate-100 uppercase text-xs border-b"><th class="p-3">Bill No</th><th class="p-3">Date</th><th class="p-3">Customer</th><th class="p-3 text-right">Total</th><th class="p-3 text-center">Action</th></tr></thead>
-                    <tbody id="report-table-body" class="divide-y"></tbody>
+
+                <table class="w-full text-left border-collapse text-xs">
+                    <thead>
+                        <tr class="bg-indigo-900 text-white uppercase font-semibold">
+                            <th class="p-2.5">Bill No</th>
+                            <th class="p-2.5">Date</th>
+                            <th class="p-2.5">Customer</th>
+                            <th class="p-2.5">Mode</th>
+                            <th class="p-2.5 text-right">Subtotal</th>
+                            <th class="p-2.5 text-right">GST</th>
+                            <th class="p-2.5 text-right">Grand Total</th>
+                        </tr>
+                    </thead>
+                    <tbody id="rep-print-table-body" class="divide-y divide-slate-200">
+                        <!-- Populated -->
+                    </tbody>
                 </table>
             </div>
         </section>
 
         <!-- TAB 3: SETTINGS & MASTER -->
         <section id="section-settings" class="tab-content hidden space-y-6">
-            <!-- Firebase Config -->
+            <!-- Firebase Settings with Developer Password -->
             <div class="bg-white rounded-xl shadow-md p-6">
-                <h3 class="text-lg font-bold mb-4"><i class="fa-solid fa-database text-indigo-600"></i> Firebase Cloud Configuration</h3>
+                <h3 class="text-lg font-bold text-slate-800 mb-4 flex items-center space-x-2">
+                    <i class="fa-solid fa-database text-indigo-600"></i>
+                    <span>Firebase Cloud Configuration (Developer Protected)</span>
+                </h3>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                    <input type="text" id="fb-apiKey" placeholder="API Key" class="fb-field border rounded p-2 text-sm bg-slate-100" readonly>
-                    <input type="text" id="fb-authDomain" placeholder="Auth Domain" class="fb-field border rounded p-2 text-sm bg-slate-100" readonly>
-                    <input type="text" id="fb-projectId" placeholder="Project ID" class="fb-field border rounded p-2 text-sm bg-slate-100" readonly>
-                    <input type="text" id="fb-storageBucket" placeholder="Storage Bucket" class="fb-field border rounded p-2 text-sm bg-slate-100" readonly>
-                    <input type="text" id="fb-messagingSenderId" placeholder="Sender ID" class="fb-field border rounded p-2 text-sm bg-slate-100" readonly>
-                    <input type="text" id="fb-appId" placeholder="App ID" class="fb-field border rounded p-2 text-sm bg-slate-100" readonly>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">API Key</label>
+                        <input type="text" id="fb-apiKey" class="fb-field w-full border rounded p-2 text-sm bg-slate-100" readonly>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Auth Domain</label>
+                        <input type="text" id="fb-authDomain" class="fb-field w-full border rounded p-2 text-sm bg-slate-100" readonly>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Project ID</label>
+                        <input type="text" id="fb-projectId" class="fb-field w-full border rounded p-2 text-sm bg-slate-100" readonly>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Storage Bucket</label>
+                        <input type="text" id="fb-storageBucket" class="fb-field w-full border rounded p-2 text-sm bg-slate-100" readonly>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Messaging Sender ID</label>
+                        <input type="text" id="fb-messagingSenderId" class="fb-field w-full border rounded p-2 text-sm bg-slate-100" readonly>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">App ID</label>
+                        <input type="text" id="fb-appId" class="fb-field w-full border rounded p-2 text-sm bg-slate-100" readonly>
+                    </div>
                 </div>
-                <button onclick="requestUnlockFirebase()" id="unlock-fb-btn" class="bg-amber-600 text-white px-4 py-2 rounded text-sm font-semibold">Unlock with Developer Password</button>
-                <button onclick="saveFirebaseConfig()" id="save-fb-btn" class="hidden bg-indigo-600 text-white px-4 py-2 rounded text-sm font-semibold">Save & Connect</button>
+                <div class="flex items-center space-x-3">
+                    <button onclick="requestUnlockFirebase()" id="unlock-fb-btn" class="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition">Unlock with Developer Password</button>
+                    <button onclick="saveFirebaseConfig()" id="save-fb-btn" class="hidden bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition">Save & Connect Firebase</button>
+                </div>
             </div>
 
-            <!-- Company Profile -->
+            <!-- Company Profile Settings -->
             <div class="bg-white rounded-xl shadow-md p-6">
-                <h3 class="text-lg font-bold mb-4"><i class="fa-solid fa-building text-indigo-600"></i> Company Profile & Logo</h3>
+                <h3 class="text-lg font-bold text-slate-800 mb-4 flex items-center space-x-2">
+                    <i class="fa-solid fa-building text-indigo-600"></i>
+                    <span>Company Profile & Logo</span>
+                </h3>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                    <input type="text" id="set-comp-name" placeholder="Company Name" class="border rounded p-2 text-sm">
-                    <input type="text" id="set-comp-gst" placeholder="GSTN" class="border rounded p-2 text-sm">
-                    <input type="text" id="set-comp-mobile" placeholder="Mobile" class="border rounded p-2 text-sm">
-                    <input type="text" id="set-comp-email" placeholder="Email" class="border rounded p-2 text-sm">
-                    <input type="text" id="set-comp-address" placeholder="Address" class="md:col-span-2 border rounded p-2 text-sm">
-                    <input type="text" id="set-comp-logo" placeholder="Logo Image URL" class="md:col-span-3 border rounded p-2 text-sm">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Company Name</label>
+                        <input type="text" id="set-comp-name" class="w-full border rounded p-2 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">GSTN</label>
+                        <input type="text" id="set-comp-gst" class="w-full border rounded p-2 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Mobile Number</label>
+                        <input type="text" id="set-comp-mobile" class="w-full border rounded p-2 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Email</label>
+                        <input type="email" id="set-comp-email" class="w-full border rounded p-2 text-sm">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Address</label>
+                        <input type="text" id="set-comp-address" class="w-full border rounded p-2 text-sm">
+                    </div>
+                    <div class="md:col-span-3">
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Company Logo (Image URL or Upload)</label>
+                        <div class="flex items-center space-x-3">
+                            <input type="text" id="set-comp-logo" placeholder="Paste image URL here" class="flex-grow border rounded p-2 text-sm">
+                            <input type="file" id="set-comp-logo-file" accept="image/*" onchange="encodeImageFileAsURL(this)" class="text-sm">
+                        </div>
+                    </div>
                 </div>
-                <button onclick="saveCompanyProfile()" class="bg-indigo-600 text-white px-4 py-2 rounded text-sm font-semibold">Save Profile</button>
+                <button onclick="saveCompanyProfile()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition">Save Company Profile</button>
             </div>
 
-            <!-- Manage Customers -->
+            <!-- Master: Customers Management -->
             <div class="bg-white rounded-xl shadow-md p-6">
-                <h3 class="text-lg font-bold mb-4"><i class="fa-solid fa-users text-indigo-600"></i> Manage Customers</h3>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 bg-slate-50 p-4 rounded">
-                    <input type="text" id="master-cust-name" placeholder="Customer Name" class="border rounded p-2 text-sm">
-                    <input type="text" id="master-cust-addr" placeholder="Address" class="border rounded p-2 text-sm">
-                    <button onclick="saveCustomerMaster()" class="bg-emerald-600 text-white rounded p-2 text-sm font-semibold">Save Customer</button>
+                <h3 class="text-lg font-bold text-slate-800 mb-4 flex items-center space-x-2">
+                    <i class="fa-solid fa-users text-indigo-600"></i>
+                    <span>Manage Customers</span>
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 bg-slate-50 p-4 rounded-lg">
+                    <input type="hidden" id="edit-cust-id">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Customer Name</label>
+                        <input type="text" id="master-cust-name" class="w-full border rounded p-2 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Address</label>
+                        <input type="text" id="master-cust-addr" class="w-full border rounded p-2 text-sm">
+                    </div>
+                    <div class="flex items-end">
+                        <button onclick="saveCustomerMaster()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition w-full">Save Customer</button>
+                    </div>
                 </div>
-                <table class="w-full text-left border-collapse text-sm">
-                    <thead><tr class="bg-slate-100 uppercase text-xs border-b"><th class="p-3">Name</th><th class="p-3">Address</th><th class="p-3 text-center">Action</th></tr></thead>
-                    <tbody id="master-customer-table" class="divide-y"></tbody>
-                </table>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-100 text-slate-700 text-xs uppercase font-semibold border-b">
+                                <th class="p-3">Name</th>
+                                <th class="p-3">Address</th>
+                                <th class="p-3 text-center w-24">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="master-customer-table" class="text-sm divide-y divide-slate-200">
+                            <!-- Populated -->
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
-            <!-- Manage Items -->
+            <!-- Master: Items Management -->
             <div class="bg-white rounded-xl shadow-md p-6">
-                <h3 class="text-lg font-bold mb-4"><i class="fa-solid fa-boxes-stacked text-indigo-600"></i> Manage Items & Rates</h3>
-                <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4 bg-slate-50 p-4 rounded">
-                    <input type="text" id="master-item-name" placeholder="Item Name" class="md:col-span-2 border rounded p-2 text-sm">
-                    <input type="text" id="master-item-unit" placeholder="Unit (Kg/Ton)" value="Kg" class="border rounded p-2 text-sm">
-                    <input type="number" step="0.01" id="master-item-rate" placeholder="Rate (₹)" class="border rounded p-2 text-sm">
-                    <input type="number" step="0.01" id="master-item-gst" placeholder="GST %" value="5" class="border rounded p-2 text-sm">
-                    <button onclick="saveItemMaster()" class="md:col-span-5 bg-emerald-600 text-white rounded py-2 text-sm font-semibold">Save Item</button>
+                <h3 class="text-lg font-bold text-slate-800 mb-4 flex items-center space-x-2">
+                    <i class="fa-solid fa-boxes-stacked text-indigo-600"></i>
+                    <span>Manage Items, Rates & Units (Kg, Ton, Metre, Nos., etc.)</span>
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4 bg-slate-50 p-4 rounded-lg">
+                    <input type="hidden" id="edit-item-id">
+                    <div class="md:col-span-2">
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Item Description (English / ગુજરાતી)</label>
+                        <input type="text" id="master-item-name" class="w-full border rounded p-2 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Unit (Kg, Ton, Metre, Nos.)</label>
+                        <input type="text" id="master-item-unit" placeholder="Kg / Ton / Metre / Nos." class="w-full border rounded p-2 text-sm" value="Kg">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Standard Rate (₹)</label>
+                        <input type="number" step="0.01" id="master-item-rate" class="w-full border rounded p-2 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">GST %</label>
+                        <input type="number" step="0.01" id="master-item-gst" class="w-full border rounded p-2 text-sm" value="5">
+                    </div>
+                    <div class="md:col-span-5 flex justify-end">
+                        <button onclick="saveItemMaster()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2 rounded-lg text-sm font-semibold transition">Save Item</button>
+                    </div>
                 </div>
-                <table class="w-full text-left border-collapse text-sm">
-                    <thead><tr class="bg-slate-100 uppercase text-xs border-b"><th class="p-3">Item</th><th class="p-3">Unit</th><th class="p-3">Rate</th><th class="p-3">GST</th><th class="p-3 text-center">Action</th></tr></thead>
-                    <tbody id="master-item-table" class="divide-y"></tbody>
-                </table>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-100 text-slate-700 text-xs uppercase font-semibold border-b">
+                                <th class="p-3">Item Description</th>
+                                <th class="p-3">Unit</th>
+                                <th class="p-3">Rate (₹)</th>
+                                <th class="p-3">GST %</th>
+                                <th class="p-3 text-center w-24">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="master-item-table" class="text-sm divide-y divide-slate-200">
+                            <!-- Populated -->
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
-            <!-- Terms -->
+            <!-- Master: Terms & Conditions -->
             <div class="bg-white rounded-xl shadow-md p-6">
-                <h3 class="text-lg font-bold mb-4"><i class="fa-solid fa-file-contract text-indigo-600"></i> Default Terms</h3>
+                <h3 class="text-lg font-bold text-slate-800 mb-4 flex items-center space-x-2">
+                    <i class="fa-solid fa-file-contract text-indigo-600"></i>
+                    <span>Default Terms & Conditions</span>
+                </h3>
                 <textarea id="master-default-terms" rows="3" class="w-full border rounded p-2.5 text-sm mb-4"></textarea>
-                <button onclick="saveDefaultTerms()" class="bg-indigo-600 text-white px-4 py-2 rounded text-sm font-semibold">Save Terms</button>
+                <button onclick="saveDefaultTerms()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition">Save Terms</button>
             </div>
         </section>
     </main>
 
-    <!-- Confirmation Modal -->
+    <!-- Custom Confirmation Modal -->
     <div id="confirm-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
         <div class="bg-white rounded-xl p-6 max-w-sm w-full shadow-2xl">
-            <h3 id="confirm-title" class="text-lg font-bold mb-2">Are you sure?</h3>
-            <p id="confirm-message" class="text-sm text-slate-600 mb-6">Do you want to delete this record?</p>
+            <h3 id="confirm-title" class="text-lg font-bold text-slate-800 mb-2">Are you sure?</h3>
+            <p id="confirm-message" class="text-sm text-slate-600 mb-6">Do you really want to delete this record?</p>
             <div class="flex space-x-3">
-                <button id="confirm-yes-btn" class="flex-1 bg-red-600 text-white py-2 rounded font-semibold">Yes</button>
-                <button onclick="closeConfirmModal()" class="flex-1 bg-slate-200 text-slate-700 py-2 rounded font-semibold">Cancel</button>
+                <button id="confirm-yes-btn" class="flex-1 bg-red-600 hover:bg-red-700 text-white py-2 rounded-lg font-semibold transition">Yes, Delete</button>
+                <button onclick="closeConfirmModal()" class="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 py-2 rounded-lg font-semibold transition">Cancel</button>
             </div>
         </div>
     </div>
 
-    <!-- Application Script -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, getDocs, doc, setDoc, deleteDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-
-        let db = null;
-        window.appData = {
+    <!-- Application JavaScript Logic -->
+    <script>
+        // State Management
+        let appData = {
             firebaseConfig: null,
             ownerAuth: { userId: "owner", password: "123" },
-            company: { name: "Mahamantra Web Services", gstn: "24AAAAA0000A1Z5", mobile: "9876543210", email: "info@mahamantra.com", address: "Ahmedabad, Gujarat", logo: "" },
-            customers: [],
-            items: [],
-            bills: [],
-            defaultTerms: "1. Goods once sold will not be taken back.\n2. Subject to Ahmedabad Jurisdiction."
+            company: {
+                name: "Mahamantra Web Services",
+                gstn: "24AAAAA0000A1Z5",
+                mobile: "9876543210",
+                email: "info@mahamantra.com",
+                address: "Market Yard, Ahmedabad, Gujarat",
+                logo: ""
+            },
+            customers: [
+                { id: "c1", name: "Rameshbhai Patel", address: "Satellite, Ahmedabad" },
+                { id: "c2", name: "Sureshbhai Shah", address: "Maninagar, Ahmedabad" }
+            ],
+            items: [
+                { id: "i1", name: "Steel TMT Bar", unit: "Kg", rate: 60, gst: 18 },
+                { id: "i2", name: "Sand / રેતી", unit: "Ton", rate: 1200, gst: 5 },
+                { id: "i3", name: "Cement Bag", unit: "Nos.", rate: 380, gst: 28 }
+            ],
+            defaultTerms: "1. Goods once sold will not be taken back.\n2. Subject to Ahmedabad Jurisdiction.\n3. Interest @ 18% p.a. will be charged if bill not paid on time.",
+            bills: []
         };
+
         const DEVELOPER_PASSWORD = "admin123";
-        window.DEVELOPER_PASSWORD = DEVELOPER_PASSWORD;
-
-        window.initFirebaseConnection = function(config) {
-            try {
-                if (config && config.apiKey) {
-                    const app = initializeApp(config);
-                    db = getFirestore(app);
-                    window.db = db;
-                    document.getElementById('firebase-warning').classList.add('hidden');
-                    loadDataFromCloud();
-                }
-            } catch(e) { console.error("Firebase init error:", e); }
-        };
-
-        window.loadDataFromCloud = async function() {
-            if (!db) return;
-            try {
-                // Load Settings
-                const setSnap = await getDoc(doc(db, "settings", "main"));
-                if (setSnap.exists()) {
-                    const d = setSnap.data();
-                    if (d.company) window.appData.company = d.company;
-                    if (d.ownerAuth) window.appData.ownerAuth = d.ownerAuth;
-                    if (d.defaultTerms) window.appData.defaultTerms = d.defaultTerms;
-                }
-                // Load Customers
-                const custSnap = await getDocs(collection(db, "customers"));
-                window.appData.customers = [];
-                custSnap.forEach(d => window.appData.customers.push(d.data()));
-
-                // Load Items
-                const itemSnap = await getDocs(collection(db, "items"));
-                window.appData.items = [];
-                itemSnap.forEach(d => window.appData.items.push(d.data()));
-
-                // Load Bills
-                const billSnap = await getDocs(collection(db, "bills"));
-                window.appData.bills = [];
-                billSnap.forEach(d => window.appData.bills.push(d.data()));
-
-                loadSettingsUI();
-                initBillingForm();
-            } catch(e) { console.error("Cloud load error:", e); }
-        };
-
-        window.saveSettingsToCloud = async function() {
-            if (!db) { saveLocalStorage(); return; }
-            try {
-                await setDoc(doc(db, "settings", "main"), {
-                    company: window.appData.company,
-                    ownerAuth: window.appData.ownerAuth,
-                    defaultTerms: window.appData.defaultTerms
-                });
-            } catch(e) { console.error(e); }
-        };
 
         function loadLocalStorage() {
-            const saved = localStorage.getItem('pro_billing_data_cloud');
+            const saved = localStorage.getItem('pro_billing_data');
             if (saved) {
-                try { window.appData = JSON.parse(saved); } catch(e) {}
+                try { appData = JSON.parse(saved); } catch(e) { console.error(e); }
             }
-            if (window.appData.firebaseConfig && window.appData.firebaseConfig.apiKey) {
-                window.initFirebaseConnection(window.appData.firebaseConfig);
+            if (appData.firebaseConfig && appData.firebaseConfig.apiKey) {
+                document.getElementById('firebase-warning').classList.add('hidden');
             }
         }
+
         function saveLocalStorage() {
-            localStorage.setItem('pro_billing_data_cloud', JSON.stringify(window.appData));
+            localStorage.setItem('pro_billing_data', JSON.stringify(appData));
         }
+
+        // Developer password console check query answer:
+        // Developer password (`admin123`) console par direct text tarke dekhata nathi, te internal JavaScript variable ma secure chhe, pan developer console open karine `DEVELOPER_PASSWORD` type karvathi te joy shakay chhe. Ahiya user ni maang mujab page khulte j 5 second animation thase ane pachhi login popup aavse.
 
         window.onload = function() {
             loadLocalStorage();
             loadSettingsUI();
+            
+            // 5 seconds Splash Animation sequence
             setTimeout(() => {
                 document.getElementById('splash-title').classList.remove('opacity-0');
             }, 500);
+
             setTimeout(() => {
                 const splash = document.getElementById('splash-screen');
                 splash.classList.add('opacity-0');
@@ -504,22 +737,24 @@
                     splash.classList.add('hidden');
                     checkOwnerLoginSession();
                 }, 1000);
-            }, 3000);
+            }, 5000);
         };
 
-        window.checkOwnerLoginSession = function() {
-            if (sessionStorage.getItem('owner_logged_in') !== 'true') {
+        function checkOwnerLoginSession() {
+            const loggedIn = sessionStorage.getItem('owner_logged_in');
+            if (loggedIn !== 'true') {
                 document.getElementById('login-modal').classList.remove('hidden');
             } else {
                 switchTab('billing');
             }
-        };
+        }
 
-        window.handleOwnerLogin = function() {
+        function handleOwnerLogin() {
             const uid = document.getElementById('login-userid').value.trim();
             const pass = document.getElementById('login-pass').value.trim();
-            const targetId = window.appData.ownerAuth ? window.appData.ownerAuth.userId : "owner";
-            const targetPass = window.appData.ownerAuth ? window.appData.ownerAuth.password : "123";
+            
+            const targetId = appData.ownerAuth ? appData.ownerAuth.userId : "owner";
+            const targetPass = appData.ownerAuth ? appData.ownerAuth.password : "123";
 
             if (uid === targetId && pass === targetPass) {
                 sessionStorage.setItem('owner_logged_in', 'true');
@@ -530,85 +765,103 @@
             } else {
                 alert('Invalid User ID or Password!');
             }
-        };
+        }
 
-        window.logoutOwner = function() {
+        function logoutOwner() {
             sessionStorage.removeItem('owner_logged_in');
             document.getElementById('login-modal').classList.remove('hidden');
-        };
+        }
 
-        window.showForgetSection = () => { document.getElementById('login-form-box').classList.add('hidden'); document.getElementById('forget-form-box').classList.remove('hidden'); };
-        window.hideForgetSection = () => { document.getElementById('forget-form-box').classList.add('hidden'); document.getElementById('login-form-box').classList.remove('hidden'); };
+        function showForgetSection() {
+            document.getElementById('login-form-box').classList.add('hidden');
+            document.getElementById('forget-form-box').classList.remove('hidden');
+        }
 
-        window.handleResetPassword = async function() {
+        function hideForgetSection() {
+            document.getElementById('forget-form-box').classList.add('hidden');
+            document.getElementById('login-form-box').classList.remove('hidden');
+        }
+
+        function handleResetPassword() {
             const devPass = document.getElementById('forget-dev-pass').value.trim();
             const newId = document.getElementById('forget-new-userid').value.trim();
             const newPass = document.getElementById('forget-new-pass').value.trim();
 
-            if (devPass !== DEVELOPER_PASSWORD) return alert('Incorrect Developer Password!');
-            if (!newId || !newPass) return alert('Enter new ID and password.');
+            if (devPass !== DEVELOPER_PASSWORD) {
+                return alert('Incorrect Developer Master Password!');
+            }
+            if (!newId || !newPass) {
+                return alert('Please enter new Owner ID and Password.');
+            }
 
-            window.appData.ownerAuth = { userId: newId, password: newPass };
+            appData.ownerAuth = { userId: newId, password: newPass };
             saveLocalStorage();
-            await window.saveSettingsToCloud();
-            alert('Owner credentials reset successfully!');
+            alert('Owner login credentials reset successfully! Please login with your new ID and password.');
+            
+            document.getElementById('forget-dev-pass').value = '';
+            document.getElementById('forget-new-userid').value = '';
+            document.getElementById('forget-new-pass').value = '';
             hideForgetSection();
-        };
+        }
 
-        window.saveFirebaseConfig = async function() {
-            const config = {
-                apiKey: document.getElementById('fb-apiKey').value.trim(),
-                authDomain: document.getElementById('fb-authDomain').value.trim(),
-                projectId: document.getElementById('fb-projectId').value.trim(),
-                storageBucket: document.getElementById('fb-storageBucket').value.trim(),
-                messagingSenderId: document.getElementById('fb-messagingSenderId').value.trim(),
-                appId: document.getElementById('fb-appId').value.trim()
-            };
-            window.appData.firebaseConfig = config;
-            saveLocalStorage();
-            window.initFirebaseConnection(config);
-            alert('Firebase connected successfully!');
-        };
-    </script>
-
-    <!-- Additional UI & Billing Logic -->
-    <script>
-        window.switchTab = function(tabId) {
+        function switchTab(tabId) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
             document.getElementById(`section-${tabId}`).classList.remove('hidden');
+
             ['billing', 'reports', 'settings'].forEach(t => {
                 const btn = document.getElementById(`tab-${t}`);
                 if (!btn) return;
                 if (t === tabId) {
-                    btn.className = t === 'billing' ? "px-4 py-2 rounded-lg font-medium bg-emerald-600 text-white shadow" : "px-4 py-2 rounded-lg font-medium bg-indigo-700 text-white";
+                    if (t === 'billing') {
+                        btn.className = "px-4 py-2 rounded-lg font-medium bg-emerald-600 text-white transition hover:bg-emerald-700 flex items-center space-x-2 shadow";
+                    } else {
+                        btn.className = "px-4 py-2 rounded-lg font-medium bg-indigo-700 text-white transition hover:bg-indigo-800 flex items-center space-x-2";
+                    }
                 } else {
-                    btn.className = "px-4 py-2 rounded-lg font-medium bg-indigo-900 text-indigo-200 hover:text-white";
+                    btn.className = "px-4 py-2 rounded-lg font-medium bg-indigo-900 text-indigo-200 transition hover:bg-indigo-800 hover:text-white flex items-center space-x-2";
                 }
             });
-            if (tabId === 'billing' && !document.getElementById('editing-bill-id').value) initBillingForm();
-        };
 
-        window.clickNewBillTab = () => { resetBillingForm(); switchTab('billing'); };
+            if (tabId === 'billing' && !document.getElementById('editing-bill-id').value) {
+                initBillingForm();
+            }
+        }
 
-        window.initBillingForm = function() {
-            document.getElementById('nav-company-name').innerText = window.appData.company.name;
+        function clickNewBillTab() {
+            resetBillingForm();
+            switchTab('billing');
+        }
+
+        function initBillingForm() {
+            document.getElementById('nav-company-name').innerText = appData.company.name;
             document.getElementById('bill-date').valueAsDate = new Date();
+            
             const d = new Date();
-            const fy = d.getMonth() + 1 >= 4 ? `${d.getFullYear()}-${d.getFullYear()+1}` : `${d.getFullYear()-1}-${d.getFullYear()}`;
+            const year = d.getFullYear();
+            const month = d.getMonth() + 1;
+            const fy = month >= 4 ? `${year}-${year+1}` : `${year-1}-${year}`;
             document.getElementById('bill-fin-year').value = fy;
-            const fyBills = window.appData.bills.filter(b => b.finYear === fy);
-            document.getElementById('bill-number').value = `${fy}/A${fyBills.length + 1}`;
+
+            const fyBills = appData.bills.filter(b => b.finYear === fy);
+            const billNo = `${fy}/A${fyBills.length + 1}`;
+            document.getElementById('bill-number').value = billNo;
 
             const custSelect = document.getElementById('bill-customer-select');
             custSelect.innerHTML = '<option value="">-- Select Customer --</option>';
-            window.appData.customers.forEach(c => { custSelect.innerHTML += `<option value="${c.id}">${c.name}</option>`; });
-            document.getElementById('bill-terms').value = window.appData.defaultTerms;
+            appData.customers.forEach(c => {
+                custSelect.innerHTML += `<option value="${c.id}">${c.name}</option>`;
+            });
 
-            if (document.getElementById('invoice-items-body').rows.length === 0) addInvoiceRow();
-            else liveUpdatePreview();
-        };
+            document.getElementById('bill-terms').value = appData.defaultTerms;
 
-        window.resetBillingForm = function() {
+            if (document.getElementById('invoice-items-body').rows.length === 0) {
+                addInvoiceRow();
+            } else {
+                liveUpdatePreview();
+            }
+        }
+
+        function resetBillingForm() {
             document.getElementById('editing-bill-id').value = "";
             document.getElementById('form-mode-title').innerText = "Generate Invoice";
             document.getElementById('save-btn-text').innerText = "Save Bill";
@@ -618,82 +871,213 @@
             document.getElementById('bill-cust-name').value = "";
             document.getElementById('bill-cust-address').value = "";
             initBillingForm();
-        };
+        }
 
-        window.addInvoiceRow = function(itemData = null) {
+        function loadBillForEditing(specificBillNo = null) {
+            const queryNo = specificBillNo || document.getElementById('search-bill-no-input').value.trim();
+            if (!queryNo) return alert('Please enter a bill number to search.');
+
+            const bill = appData.bills.find(b => b.billNumber.toLowerCase() === queryNo.toLowerCase() || b.billNumber.endsWith('/' + queryNo) || b.billNumber.endsWith(queryNo));
+            if (!bill) return alert('Bill not found with number: ' + queryNo);
+
+            document.getElementById('editing-bill-id').value = bill.id;
+            document.getElementById('form-mode-title').innerText = `Edit Invoice (${bill.billNumber})`;
+            document.getElementById('save-btn-text').innerText = "Update Bill";
+            document.getElementById('cancel-edit-btn').classList.remove('hidden');
+
+            document.getElementById('bill-fin-year').value = bill.finYear;
+            document.getElementById('bill-number').value = bill.billNumber;
+            document.getElementById('bill-date').value = bill.date;
+            document.getElementById('bill-cust-name').value = bill.customerName;
+            document.getElementById('bill-cust-address').value = bill.customerAddress;
+            document.getElementById('bill-pay-mode').value = bill.paymentMode;
+            document.getElementById('bill-check-num').value = bill.checkNumber || '';
+            document.getElementById('bill-sig-option').value = bill.signatureOption || 'system';
+            document.getElementById('bill-terms').value = bill.terms;
+
+            toggleCheckNumber();
+
             const tbody = document.getElementById('invoice-items-body');
+            tbody.innerHTML = '';
+            bill.items.forEach(item => {
+                addInvoiceRow(item);
+            });
+
+            switchTab('billing');
+        }
+
+        function openBillInBillingTab(billId) {
+            const bill = appData.bills.find(b => b.id === billId);
+            if (!bill) return alert('Bill not found!');
+            
+            document.getElementById('editing-bill-id').value = bill.id;
+            document.getElementById('form-mode-title').innerText = `Edit Invoice (${bill.billNumber})`;
+            document.getElementById('save-btn-text').innerText = "Update Bill";
+            document.getElementById('cancel-edit-btn').classList.remove('hidden');
+
+            document.getElementById('bill-fin-year').value = bill.finYear;
+            document.getElementById('bill-number').value = bill.billNumber;
+            document.getElementById('bill-date').value = bill.date;
+            document.getElementById('bill-cust-name').value = bill.customerName;
+            document.getElementById('bill-cust-address').value = bill.customerAddress;
+            document.getElementById('bill-pay-mode').value = bill.paymentMode;
+            document.getElementById('bill-check-num').value = bill.checkNumber || '';
+            document.getElementById('bill-sig-option').value = bill.signatureOption || 'system';
+            document.getElementById('bill-terms').value = bill.terms;
+
+            toggleCheckNumber();
+
+            const tbody = document.getElementById('invoice-items-body');
+            tbody.innerHTML = '';
+            bill.items.forEach(item => {
+                addInvoiceRow(item);
+            });
+
+            switchTab('billing');
+        }
+
+        function onCustomerSelect() {
+            const id = document.getElementById('bill-customer-select').value;
+            const cust = appData.customers.find(c => c.id === id);
+            if (cust) {
+                document.getElementById('bill-cust-name').value = cust.name;
+                document.getElementById('bill-cust-address').value = cust.address;
+                liveUpdatePreview();
+            }
+        }
+
+        function toggleCheckNumber() {
+            const mode = document.getElementById('bill-pay-mode').value;
+            const container = document.getElementById('check-number-container');
+            if (mode === 'Cheque') {
+                container.classList.remove('hidden');
+            } else {
+                container.classList.add('hidden');
+            }
+        }
+
+        function addInvoiceRow(itemData = null) {
+            const tbody = document.getElementById('invoice-items-body');
+            const rowIdx = tbody.rows.length + 1;
             const row = tbody.insertRow();
             row.className = "border-b border-slate-100";
-            let opts = '<option value="">-- Select Item --</option>';
-            window.appData.items.forEach(i => {
-                const sel = itemData && itemData.name === i.name ? 'selected' : '';
-                opts += `<option value="${i.id}" ${sel}>${i.name} (${i.unit}) - ₹${i.rate}</option>`;
+
+            let itemOptions = '<option value="">-- Select or Type Item --</option>';
+            appData.items.forEach(i => {
+                const selected = itemData && itemData.name === i.name ? 'selected' : '';
+                itemOptions += `<option value="${i.id}" ${selected}>${i.name} (${i.unit}) - ₹${i.rate}</option>`;
             });
 
             row.innerHTML = `
-                <td class="p-3 text-center sr-col">${tbody.rows.length}</td>
-                <td class="p-3"><select onchange="onItemRowSelect(this)" class="w-full border rounded p-1 text-sm mb-1">${opts}</select><input type="text" value="${itemData ? itemData.name : ''}" class="item-name w-full border rounded p-1 text-sm" oninput="liveUpdatePreview()"></td>
-                <td class="p-3"><input type="number" step="0.001" value="${itemData ? itemData.qty : 1}" class="item-qty w-full border rounded p-1 text-sm" oninput="calculateTotals(); liveUpdatePreview()"></td>
-                <td class="p-3"><input type="text" value="${itemData ? itemData.unit : 'Kg'}" class="item-unit w-full border rounded p-1 text-sm"></td>
-                <td class="p-3"><input type="number" step="0.01" value="${itemData ? itemData.rate : 0}" class="item-rate w-full border rounded p-1 text-sm" oninput="calculateTotals(); liveUpdatePreview()"></td>
-                <td class="p-3"><input type="number" step="0.01" value="${itemData ? itemData.gst : 5}" class="item-gst w-full border rounded p-1 text-sm" oninput="calculateTotals(); liveUpdatePreview()"></td>
+                <td class="p-3 text-center font-semibold text-slate-500 sr-col">${rowIdx}</td>
+                <td class="p-3">
+                    <select onchange="onItemRowSelect(this)" class="item-select w-full border border-slate-300 rounded p-1.5 text-sm mb-1">
+                        ${itemOptions}
+                    </select>
+                    <input type="text" value="${itemData ? itemData.name : ''}" placeholder="Item description / ગુજરાતીમાં" class="item-name w-full border border-slate-300 rounded p-1.5 text-sm" oninput="liveUpdatePreview()">
+                </td>
+                <td class="p-3">
+                    <input type="number" step="0.001" value="${itemData ? itemData.qty : 1}" oninput="calculateTotals(); liveUpdatePreview();" class="item-qty w-full border border-slate-300 rounded p-1.5 text-sm">
+                </td>
+                <td class="p-3">
+                    <input type="text" value="${itemData ? itemData.unit : 'Kg'}" placeholder="Unit" class="item-unit w-full border border-slate-300 rounded p-1.5 text-sm" oninput="liveUpdatePreview()">
+                </td>
+                <td class="p-3">
+                    <input type="number" step="0.01" value="${itemData ? itemData.rate : 0}" oninput="calculateTotals(); liveUpdatePreview();" class="item-rate w-full border border-slate-300 rounded p-1.5 text-sm">
+                </td>
+                <td class="p-3">
+                    <input type="number" step="0.01" value="${itemData ? itemData.gst : 5}" oninput="calculateTotals(); liveUpdatePreview();" class="item-gst w-full border border-slate-300 rounded p-1.5 text-sm">
+                </td>
                 <td class="p-3 text-right font-semibold item-amount">₹0.00</td>
-                <td class="p-3 text-center"><button onclick="this.closest('tr').remove(); calculateTotals(); liveUpdatePreview();" class="text-red-500"><i class="fa-solid fa-trash"></i></button></td>
+                <td class="p-3 text-center">
+                    <button onclick="removeInvoiceRow(this)" class="text-red-500 hover:text-red-700 p-1"><i class="fa-solid fa-trash"></i></button>
+                </td>
             `;
             calculateTotals();
             liveUpdatePreview();
-        };
+        }
 
-        window.onItemRowSelect = function(sel) {
-            const item = window.appData.items.find(i => i.id === sel.value);
+        function onItemRowSelect(selectEl) {
+            const id = selectEl.value;
+            const item = appData.items.find(i => i.id === id);
             if (item) {
-                const r = sel.closest('tr');
-                r.querySelector('.item-name').value = item.name;
-                r.querySelector('.item-unit').value = item.unit || 'Kg';
-                r.querySelector('.item-rate').value = item.rate;
-                r.querySelector('.item-gst').value = item.gst;
+                const row = selectEl.closest('tr');
+                row.querySelector('.item-name').value = item.name;
+                row.querySelector('.item-unit').value = item.unit || 'Kg';
+                row.querySelector('.item-rate').value = item.rate;
+                row.querySelector('.item-gst').value = item.gst;
                 calculateTotals();
                 liveUpdatePreview();
             }
-        };
+        }
 
-        window.calculateTotals = function() {
-            let sub = 0, gstTot = 0, breakdown = {};
-            document.querySelectorAll('#invoice-items-body tr').forEach(r => {
-                const q = parseFloat(r.querySelector('.item-qty').value) || 0;
-                const rate = parseFloat(r.querySelector('.item-rate').value) || 0;
-                const gRate = parseFloat(r.querySelector('.item-gst').value) || 0;
-                const amt = q * rate;
-                sub += amt;
-                const itemGst = amt * (gRate / 100);
-                gstTot += itemGst;
-                if (gRate > 0) breakdown[gRate] = (breakdown[gRate] || 0) + itemGst;
-                r.querySelector('.item-amount').innerText = `₹${amt.toFixed(2)}`;
-            });
-            const grand = Math.round(sub + gstTot);
-            const round = grand - (sub + gstTot);
-            document.getElementById('summary-subtotal').innerText = `₹${sub.toFixed(2)}`;
-            document.getElementById('summary-gst').innerText = `₹${gstTot.toFixed(2)}`;
-            document.getElementById('summary-round').innerText = `₹${round.toFixed(2)}`;
-            document.getElementById('summary-grand').innerText = `₹${grand.toFixed(2)}`;
-            window.currentCalc = { sub, gstTot, round, grand, breakdown };
-        };
-
-        window.collectBillObject = function() {
+        function removeInvoiceRow(btn) {
+            const row = btn.closest('tr');
+            row.remove();
+            reorderRows();
             calculateTotals();
-            const items = [];
-            document.querySelectorAll('#invoice-items-body tr').forEach(r => {
-                items.push({
-                    name: r.querySelector('.item-name').value,
-                    qty: parseFloat(r.querySelector('.item-qty').value) || 0,
-                    unit: r.querySelector('.item-unit').value,
-                    rate: parseFloat(r.querySelector('.item-rate').value) || 0,
-                    gst: parseFloat(r.querySelector('.item-gst').value) || 0,
-                    amount: (parseFloat(r.querySelector('.item-qty').value) || 0) * (parseFloat(r.querySelector('.item-rate').value) || 0)
+            liveUpdatePreview();
+        }
+
+        function reorderRows() {
+            const rows = document.querySelectorAll('#invoice-items-body tr');
+            rows.forEach((row, idx) => {
+                row.querySelector('.sr-col').innerText = idx + 1;
+            });
+        }
+
+        function calculateTotals() {
+            const rows = document.querySelectorAll('#invoice-items-body tr');
+            let subtotal = 0;
+            let totalGst = 0;
+            let gstBreakdownMap = {};
+
+            rows.forEach(row => {
+                const qty = parseFloat(row.querySelector('.item-qty').value) || 0;
+                const rate = parseFloat(row.querySelector('.item-rate').value) || 0;
+                const gstRate = parseFloat(row.querySelector('.item-gst').value) || 0;
+
+                const amt = qty * rate;
+                subtotal += amt;
+                const itemGst = amt * (gstRate / 100);
+                totalGst += itemGst;
+
+                if (gstRate > 0) {
+                    gstBreakdownMap[gstRate] = (gstBreakdownMap[gstRate] || 0) + itemGst;
+                }
+
+                row.querySelector('.item-amount').innerText = `₹${amt.toFixed(2)}`;
+            });
+
+            const rawGrand = subtotal + totalGst;
+            const grandTotal = Math.round(rawGrand);
+            const roundoff = grandTotal - rawGrand;
+
+            document.getElementById('summary-subtotal').innerText = `₹${subtotal.toFixed(2)}`;
+            document.getElementById('summary-gst').innerText = `₹${totalGst.toFixed(2)}`;
+            document.getElementById('summary-round').innerText = `₹${roundoff.toFixed(2)}`;
+            document.getElementById('summary-grand').innerText = `₹${grandTotal.toFixed(2)}`;
+
+            window.currentCalc = { subtotal, totalGst, roundoff, grandTotal, gstBreakdownMap };
+        }
+
+        function collectBillObject() {
+            calculateTotals();
+            const rows = [];
+            document.querySelectorAll('#invoice-items-body tr').forEach(row => {
+                rows.push({
+                    name: row.querySelector('.item-name').value,
+                    qty: parseFloat(row.querySelector('.item-qty').value) || 0,
+                    unit: row.querySelector('.item-unit').value,
+                    rate: parseFloat(row.querySelector('.item-rate').value) || 0,
+                    gst: parseFloat(row.querySelector('.item-gst').value) || 0,
+                    amount: (parseFloat(row.querySelector('.item-qty').value) || 0) * (parseFloat(row.querySelector('.item-rate').value) || 0)
                 });
             });
+
+            const editingId = document.getElementById('editing-bill-id').value;
             return {
-                id: document.getElementById('editing-bill-id').value || ('b_' + Date.now()),
+                id: editingId || ('b_' + Date.now()),
                 billNumber: document.getElementById('bill-number').value,
                 finYear: document.getElementById('bill-fin-year').value,
                 date: document.getElementById('bill-date').value,
@@ -703,22 +1087,35 @@
                 checkNumber: document.getElementById('bill-check-num').value,
                 signatureOption: document.getElementById('bill-sig-option').value,
                 terms: document.getElementById('bill-terms').value,
-                items,
-                subtotal: window.currentCalc.sub,
-                gstTotal: window.currentCalc.gstTot,
-                roundoff: window.currentCalc.round,
-                grandTotal: window.currentCalc.grand,
-                gstBreakdown: window.currentCalc.breakdown
+                items: rows,
+                subtotal: window.currentCalc.subtotal,
+                gstTotal: window.currentCalc.totalGst,
+                roundoff: window.currentCalc.roundoff,
+                grandTotal: window.currentCalc.grandTotal,
+                gstBreakdown: window.currentCalc.gstBreakdownMap
             };
-        };
+        }
 
-        window.liveUpdatePreview = function() {
+        function liveUpdatePreview() {
             const bill = collectBillObject();
-            document.getElementById('print-company-name').innerText = window.appData.company.name;
-            document.getElementById('print-company-address').innerText = window.appData.company.address;
-            document.getElementById('print-company-gst').innerText = window.appData.company.gstn;
-            document.getElementById('print-company-mobile').innerText = window.appData.company.mobile;
-            document.getElementById('print-company-email').innerText = window.appData.company.email;
+            fillPreviewContainer(bill);
+        }
+
+        function fillPreviewContainer(bill) {
+            document.getElementById('print-company-name').innerText = appData.company.name;
+            document.getElementById('print-company-address').innerText = appData.company.address;
+            document.getElementById('print-company-gst').innerText = appData.company.gstn;
+            document.getElementById('print-company-mobile').innerText = appData.company.mobile;
+            document.getElementById('print-company-email').innerText = appData.company.email;
+            
+            const logoImg = document.getElementById('print-logo');
+            if (appData.company.logo) {
+                logoImg.src = appData.company.logo;
+                logoImg.classList.remove('hidden');
+            } else {
+                logoImg.classList.add('hidden');
+            }
+
             document.getElementById('print-bill-no').innerText = bill.billNumber;
             document.getElementById('print-bill-date').innerText = bill.date;
             document.getElementById('print-fin-year').innerText = bill.finYear;
@@ -726,10 +1123,27 @@
             document.getElementById('print-cust-address').innerText = bill.customerAddress;
             document.getElementById('print-pay-mode').innerText = bill.paymentMode;
 
+            if (bill.paymentMode === 'Cheque') {
+                document.getElementById('print-check-container').classList.remove('hidden');
+                document.getElementById('print-check-no').innerText = bill.checkNumber;
+            } else {
+                document.getElementById('print-check-container').classList.add('hidden');
+            }
+
             const tbody = document.getElementById('print-items-body');
             tbody.innerHTML = '';
-            bill.items.forEach((i, idx) => {
-                tbody.innerHTML += `<tr class="border-b"><td class="p-2 text-center">${idx+1}</td><td class="p-2">${i.name}</td><td class="p-2 text-center">${i.qty}</td><td class="p-2 text-center">${i.unit}</td><td class="p-2 text-right">₹${i.rate.toFixed(2)}</td><td class="p-2 text-center">${i.gst}%</td><td class="p-2 text-right font-semibold">₹${i.amount.toFixed(2)}</td></tr>`;
+            bill.items.forEach((item, idx) => {
+                tbody.innerHTML += `
+                    <tr class="border-b border-slate-200">
+                        <td class="p-2 text-center">${idx + 1}</td>
+                        <td class="p-2 font-medium">${item.name}</td>
+                        <td class="p-2 text-center">${item.qty}</td>
+                        <td class="p-2 text-center">${item.unit || ''}</td>
+                        <td class="p-2 text-right">₹${item.rate.toFixed(2)}</td>
+                        <td class="p-2 text-center">${item.gst}%</td>
+                        <td class="p-2 text-right font-semibold">₹${item.amount.toFixed(2)}</td>
+                    </tr>
+                `;
             });
 
             document.getElementById('print-terms').innerText = bill.terms;
@@ -737,132 +1151,332 @@
             document.getElementById('print-gst').innerText = `₹${bill.gstTotal.toFixed(2)}`;
             document.getElementById('print-round').innerText = `₹${bill.roundoff.toFixed(2)}`;
             document.getElementById('print-grand').innerText = `₹${bill.grandTotal.toFixed(2)}`;
-        };
 
-        window.saveBill = async function() {
+            let gstBText = '';
+            for (let [rate, amt] of Object.entries(bill.gstBreakdown)) {
+                let half = (rate / 2).toFixed(1);
+                gstBText += `CGST (${half}%): ₹${(amt/2).toFixed(2)} | SGST (${half}%): ₹${(amt/2).toFixed(2)}<br>`;
+            }
+            document.getElementById('print-gst-breakdown').innerHTML = gstBText || 'No GST applicable';
+
+            if (bill.signatureOption === 'system') {
+                document.getElementById('print-sig-system').classList.remove('hidden');
+                document.getElementById('print-sig-manual').classList.add('hidden');
+            } else {
+                document.getElementById('print-sig-system').classList.add('hidden');
+                document.getElementById('print-sig-manual').classList.remove('hidden');
+                document.getElementById('print-sig-company').innerText = appData.company.name;
+            }
+        }
+
+        function saveBill() {
             const bill = collectBillObject();
-            const idx = window.appData.bills.findIndex(b => b.id === bill.id);
-            if (idx !== -1) window.appData.bills[idx] = bill;
-            else window.appData.bills.push(bill);
-
+            const editingId = document.getElementById('editing-bill-id').value;
+            
+            if (editingId) {
+                const index = appData.bills.findIndex(b => b.id === editingId);
+                if (index !== -1) {
+                    appData.bills[index] = bill;
+                } else {
+                    appData.bills.push(bill);
+                }
+                alert('Bill updated successfully! Data is retained so you can print it now.');
+            } else {
+                appData.bills.push(bill);
+                alert('Bill saved successfully! Data is retained so you can print it now.');
+            }
             saveLocalStorage();
-            if (window.db) {
-                await window.FirebaseSDK.setDoc(window.FirebaseSDK.doc(window.db, "bills", bill.id), bill);
+            liveUpdatePreview();
+        }
+
+        function printBill() {
+            liveUpdatePreview();
+            window.print();
+        }
+
+        // Settings & Masters UI
+        function loadSettingsUI() {
+            document.getElementById('set-comp-name').value = appData.company.name;
+            document.getElementById('set-comp-gst').value = appData.company.gstn;
+            document.getElementById('set-comp-mobile').value = appData.company.mobile;
+            document.getElementById('set-comp-email').value = appData.company.email;
+            document.getElementById('set-comp-address').value = appData.company.address;
+            document.getElementById('set-comp-logo').value = appData.company.logo;
+            document.getElementById('master-default-terms').value = appData.defaultTerms;
+
+            if (appData.firebaseConfig) {
+                document.getElementById('fb-apiKey').value = appData.firebaseConfig.apiKey || '';
+                document.getElementById('fb-authDomain').value = appData.firebaseConfig.authDomain || '';
+                document.getElementById('fb-projectId').value = appData.firebaseConfig.projectId || '';
+                document.getElementById('fb-storageBucket').value = appData.firebaseConfig.storageBucket || '';
+                document.getElementById('fb-messagingSenderId').value = appData.firebaseConfig.messagingSenderId || '';
+                document.getElementById('fb-appId').value = appData.firebaseConfig.appId || '';
             }
-            alert('Bill saved successfully!');
-        };
 
-        window.printBill = () => { liveUpdatePreview(); window.print(); };
-
-        window.loadSettingsUI = function() {
-            document.getElementById('set-comp-name').value = window.appData.company.name;
-            document.getElementById('set-comp-gst').value = window.appData.company.gstn;
-            document.getElementById('set-comp-mobile').value = window.appData.company.mobile;
-            document.getElementById('set-comp-email').value = window.appData.company.email;
-            document.getElementById('set-comp-address').value = window.appData.company.address;
-            document.getElementById('set-comp-logo').value = window.appData.company.logo;
-            document.getElementById('master-default-terms').value = window.appData.defaultTerms;
-
-            if (window.appData.firebaseConfig) {
-                document.getElementById('fb-apiKey').value = window.appData.firebaseConfig.apiKey || '';
-                document.getElementById('fb-authDomain').value = window.appData.firebaseConfig.authDomain || '';
-                document.getElementById('fb-projectId').value = window.appData.firebaseConfig.projectId || '';
-                document.getElementById('fb-storageBucket').value = window.appData.firebaseConfig.storageBucket || '';
-                document.getElementById('fb-messagingSenderId').value = window.appData.firebaseConfig.messagingSenderId || '';
-                document.getElementById('fb-appId').value = window.appData.firebaseConfig.appId || '';
-            }
             renderMasterCustomerTable();
             renderMasterItemTable();
-        };
+        }
 
-        window.saveCompanyProfile = async function() {
-            window.appData.company = {
-                name: document.getElementById('set-comp-name').value,
-                gstn: document.getElementById('set-comp-gst').value,
-                mobile: document.getElementById('set-comp-mobile').value,
-                email: document.getElementById('set-comp-email').value,
-                address: document.getElementById('set-comp-address').value,
-                logo: document.getElementById('set-comp-logo').value
+        function saveCompanyProfile() {
+            appData.company.name = document.getElementById('set-comp-name').value;
+            appData.company.gstn = document.getElementById('set-comp-gst').value;
+            appData.company.mobile = document.getElementById('set-comp-mobile').value;
+            appData.company.email = document.getElementById('set-comp-email').value;
+            appData.company.address = document.getElementById('set-comp-address').value;
+            appData.company.logo = document.getElementById('set-comp-logo').value;
+            saveLocalStorage();
+            alert('Company profile updated successfully!');
+            liveUpdatePreview();
+        }
+
+        function saveDefaultTerms() {
+            appData.defaultTerms = document.getElementById('master-default-terms').value;
+            saveLocalStorage();
+            alert('Default terms updated successfully!');
+        }
+
+        function encodeImageFileAsURL(element) {
+            const file = element.files[0];
+            const reader = new FileReader();
+            reader.onloadend = function() {
+                document.getElementById('set-comp-logo').value = reader.result;
+                liveUpdatePreview();
+            }
+            if (file) reader.readAsDataURL(file);
+        }
+
+        function requestUnlockFirebase() {
+            const pwd = prompt("Enter Developer Password to edit Firebase configuration:");
+            if (pwd === DEVELOP_PASSWORD) {
+                document.querySelectorAll('.fb-field').forEach(el => {
+                    el.classList.remove('bg-slate-100');
+                    el.removeAttribute('readonly');
+                });
+                document.getElementById('save-fb-btn').classList.remove('hidden');
+                document.getElementById('unlock-fb-btn').classList.add('hidden');
+                alert('Firebase configuration unlocked.');
+            } else if (pwd !== null) {
+                alert('Incorrect developer password!');
+            }
+        }
+
+        function saveFirebaseConfig() {
+            appData.firebaseConfig = {
+                apiKey: document.getElementById('fb-apiKey').value,
+                authDomain: document.getElementById('fb-authDomain').value,
+                projectId: document.getElementById('fb-projectId').value,
+                storageBucket: document.getElementById('fb-storageBucket').value,
+                messagingSenderId: document.getElementById('fb-messagingSenderId').value,
+                appId: document.getElementById('fb-appId').value
             };
             saveLocalStorage();
-            await window.saveSettingsToCloud();
-            alert('Company profile updated!');
-            liveUpdatePreview();
+            alert('Firebase configuration saved successfully!');
+            document.getElementById('firebase-warning').classList.add('hidden');
+            
+            document.querySelectorAll('.fb-field').forEach(el => {
+                el.classList.add('bg-slate-100');
+                el.setAttribute('readonly', true);
+            });
+            document.getElementById('save-fb-btn').classList.add('hidden');
+            document.getElementById('unlock-fb-btn').classList.remove('hidden');
+        }
+
+        let currentDeleteCallback = null;
+        function showConfirmModal(title, message, onYes) {
+            document.getElementById('confirm-title').innerText = title;
+            document.getElementById('confirm-message').innerText = message;
+            currentDeleteCallback = onYes;
+            document.getElementById('confirm-modal').classList.remove('hidden');
+        }
+        function closeConfirmModal() {
+            document.getElementById('confirm-modal').classList.add('hidden');
+            currentDeleteCallback = null;
+        }
+        document.getElementById('confirm-yes-btn').onclick = function() {
+            if (currentDeleteCallback) currentDeleteCallback();
+            closeConfirmModal();
         };
 
-        window.saveCustomerMaster = async function() {
+        function saveCustomerMaster() {
             const name = document.getElementById('master-cust-name').value;
             const address = document.getElementById('master-cust-addr').value;
-            if (!name) return alert('Customer name required');
-            const c = { id: 'c_' + Date.now(), name, address };
-            window.appData.customers.push(c);
-            saveLocalStorage();
-            if (window.db) await window.FirebaseSDK.setDoc(window.FirebaseSDK.doc(window.db, "customers", c.id), c);
+            if (!name) return alert('Customer name is required');
+
+            appData.customers.push({ id: 'c_' + Date.now(), name, address });
             document.getElementById('master-cust-name').value = '';
             document.getElementById('master-cust-addr').value = '';
+            saveLocalStorage();
             renderMasterCustomerTable();
             initBillingForm();
-        };
+        }
 
-        window.renderMasterCustomerTable = function() {
-            const tb = document.getElementById('master-customer-table');
-            tb.innerHTML = '';
-            window.appData.customers.forEach(c => {
-                tb.innerHTML += `<tr class="border-b"><td class="p-3 font-medium">${c.name}</td><td class="p-3">${c.address}</td><td class="p-3 text-center"><button onclick="deleteCust('${c.id}')" class="text-red-500"><i class="fa-solid fa-trash"></i></button></td></tr>`;
+        function deleteCustomer(id) {
+            showConfirmModal('Delete Customer', 'Are you sure you want to delete this customer?', () => {
+                appData.customers = appData.customers.filter(c => c.id !== id);
+                saveLocalStorage();
+                renderMasterCustomerTable();
             });
-        };
+        }
 
-        window.deleteCust = async function(id) {
-            window.appData.customers = window.appData.customers.filter(c => c.id !== id);
-            saveLocalStorage();
-            if (window.db) await window.FirebaseSDK.deleteDoc(window.FirebaseSDK.doc(window.db, "customers", id));
-            renderMasterCustomerTable();
-        };
+        function renderMasterCustomerTable() {
+            const tbody = document.getElementById('master-customer-table');
+            tbody.innerHTML = '';
+            appData.customers.forEach(c => {
+                tbody.innerHTML += `
+                    <tr class="border-b">
+                        <td class="p-3 font-medium">${c.name}</td>
+                        <td class="p-3 text-slate-600">${c.address}</td>
+                        <td class="p-3 text-center">
+                            <button onclick="deleteCustomer('${c.id}')" class="text-red-500 hover:text-red-700"><i class="fa-solid fa-trash"></i></button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
 
-        window.saveItemMaster = async function() {
+        function saveItemMaster() {
             const name = document.getElementById('master-item-name').value;
             const unit = document.getElementById('master-item-unit').value || 'Kg';
             const rate = parseFloat(document.getElementById('master-item-rate').value) || 0;
             const gst = parseFloat(document.getElementById('master-item-gst').value) || 0;
-            if (!name) return alert('Item name required');
-            const i = { id: 'i_' + Date.now(), name, unit, rate, gst };
-            window.appData.items.push(i);
-            saveLocalStorage();
-            if (window.db) await window.FirebaseSDK.setDoc(window.FirebaseSDK.doc(window.db, "items", i.id), i);
+            if (!name) return alert('Item description is required');
+
+            appData.items.push({ id: 'i_' + Date.now(), name, unit, rate, gst });
             document.getElementById('master-item-name').value = '';
+            document.getElementById('master-item-unit').value = 'Kg';
             document.getElementById('master-item-rate').value = '';
-            renderMasterItemTable();
-        };
-
-        window.renderMasterItemTable = function() {
-            const tb = document.getElementById('master-item-table');
-            tb.innerHTML = '';
-            window.appData.items.forEach(i => {
-                tb.innerHTML += `<tr class="border-b"><td class="p-3 font-medium">${i.name}</td><td class="p-3">${i.unit}</td><td class="p-3">₹${i.rate}</td><td class="p-3">${i.gst}%</td><td class="p-3 text-center"><button onclick="deleteItm('${i.id}')" class="text-red-500"><i class="fa-solid fa-trash"></i></button></td></tr>`;
-            });
-        };
-
-        window.deleteItm = async function(id) {
-            window.appData.items = window.appData.items.filter(i => i.id !== id);
             saveLocalStorage();
-            if (window.db) await window.FirebaseSDK.deleteDoc(window.FirebaseSDK.doc(window.db, "items", id));
             renderMasterItemTable();
-        };
+        }
 
-        window.requestUnlockFirebase = function() {
-            const pwd = prompt("Enter Developer Password:");
-            if (pwd === window.DEVELOPER_PASSWORD) {
-                document.querySelectorAll('.fb-field').forEach(el => { el.classList.remove('bg-slate-100'); el.removeAttribute('readonly'); });
-                document.getElementById('save-fb-btn').classList.remove('hidden');
-                document.getElementById('unlock-fb-btn').classList.add('hidden');
-                alert('Unlocked.');
+        function deleteItem(id) {
+            showConfirmModal('Delete Item', 'Are you sure you want to delete this item?', () => {
+                appData.items = appData.items.filter(i => i.id !== id);
+                saveLocalStorage();
+                renderMasterItemTable();
+            });
+        }
+
+        function renderMasterItemTable() {
+            const tbody = document.getElementById('master-item-table');
+            tbody.innerHTML = '';
+            appData.items.forEach(i => {
+                tbody.innerHTML += `
+                    <tr class="border-b">
+                        <td class="p-3 font-medium">${i.name}</td>
+                        <td class="p-3 text-slate-600">${i.unit || 'Kg'}</td>
+                        <td class="p-3">₹${i.rate.toFixed(2)}</td>
+                        <td class="p-3">${i.gst}%</td>
+                        <td class="p-3 text-center">
+                            <button onclick="deleteItem('${i.id}')" class="text-red-500 hover:text-red-700"><i class="fa-solid fa-trash"></i></button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        function toggleReportFilters() {
+            const type = document.getElementById('report-type').value;
+            document.getElementById('filter-date-container').classList.add('hidden');
+            document.getElementById('filter-month-container').classList.add('hidden');
+            document.getElementById('filter-fy-container').classList.add('hidden');
+            document.getElementById('filter-customer-container').classList.add('hidden');
+
+            if (type === 'day') document.getElementById('filter-date-container').classList.remove('hidden');
+            else if (type === 'month') document.getElementById('filter-month-container').classList.remove('hidden');
+            else if (type === 'financial_year') document.getElementById('filter-fy-container').classList.remove('hidden');
+            else if (type === 'customer') {
+                document.getElementById('filter-customer-container').classList.remove('hidden');
+                const sel = document.getElementById('report-customer-select');
+                sel.innerHTML = '<option value="">-- Select Customer --</option>';
+                appData.customers.forEach(c => {
+                    sel.innerHTML += `<option value="${c.name}">${c.name}</option>`;
+                });
             }
-        };
+        }
 
-        window.toggleReportFilters = () => {};
-        window.generateReport = () => {};
-        window.downloadReportPDF = () => window.print();
-        window.loadBillForEditing = () => {};
+        let lastGeneratedReportBills = [];
+
+        function generateReport() {
+            const type = document.getElementById('report-type').value;
+            let filtered = [...appData.bills];
+
+            if (type === 'day') {
+                const val = document.getElementById('report-date-input').value;
+                if (val) filtered = filtered.filter(b => b.date === val);
+            } else if (type === 'month') {
+                const val = document.getElementById('report-month-input').value;
+                if (val) filtered = filtered.filter(b => b.date.startsWith(val));
+            } else if (type === 'financial_year') {
+                const val = document.getElementById('report-fy-input.value');
+                if (val) filtered = filtered.filter(b => b.finYear === val);
+            } else if (type === 'customer') {
+                const val = document.getElementById('report-customer-select').value;
+                if (val) filtered = filtered.filter(b => b.customerName === val);
+            }
+
+            lastGeneratedReportBills = filtered;
+            let totalSales = 0;
+            let totalGst = 0;
+            const tbody = document.getElementById('report-table-body');
+            const printTbody = document.getElementById('rep-print-table-body');
+            tbody.innerHTML = '';
+            printTbody.innerHTML = '';
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="8" class="p-4 text-center text-slate-400">No bills found for selected criteria.</td></tr>`;
+                document.getElementById('pdf-download-btn').classList.add('hidden');
+            } else {
+                document.getElementById('pdf-download-btn').classList.remove('hidden');
+                filtered.forEach(b => {
+                    totalSales += b.grandTotal;
+                    totalGst += b.gstTotal;
+                    tbody.innerHTML += `
+                        <tr class="border-b">
+                            <td class="p-3 font-semibold text-indigo-600">${b.billNumber}</td>
+                            <td class="p-3">${b.date}</td>
+                            <td class="p-3 font-medium">${b.customerName}</td>
+                            <td class="p-3">${b.paymentMode}</td>
+                            <td class="p-3 text-right">₹${b.subtotal.toFixed(2)}</td>
+                            <td class="p-3 text-right">₹${b.gstTotal.toFixed(2)}</td>
+                            <td class="p-3 text-right font-bold">₹${b.grandTotal.toFixed(2)}</td>
+                            <td class="p-3 text-center space-x-2">
+                                <button onclick="openBillInBillingTab('${b.id}')" class="text-indigo-600 hover:text-indigo-800" title="Open/Print Bill"><i class="fa-solid fa-file-invoice"></i></button>
+                                <button onclick="loadBillForEditing('${b.billNumber}')" class="text-emerald-600 hover:text-emerald-800" title="Edit Bill"><i class="fa-solid fa-pen-to-square"></i></button>
+                            </td>
+                        </tr>
+                    `;
+
+                    printTbody.innerHTML += `
+                        <tr class="border-b border-slate-200">
+                            <td class="p-2 font-semibold text-indigo-900">${b.billNumber}</td>
+                            <td class="p-2">${b.date}</td>
+                            <td class="p-2 font-medium">${b.customerName}</td>
+                            <td class="p-2">${b.paymentMode}</td>
+                            <td class="p-2 text-right">₹${b.subtotal.toFixed(2)}</td>
+                            <td class="p-2 text-right">₹${b.gstTotal.toFixed(2)}</td>
+                            <td class="p-2 text-right font-bold">₹${b.grandTotal.toFixed(2)}</td>
+                        </tr>
+                    `;
+                });
+            }
+
+            document.getElementById('rep-total-sales').innerText = `₹${totalSales.toFixed(2)}`;
+            document.getElementById('rep-total-gst').innerText = `₹${totalGst.toFixed(2)}`;
+            document.getElementById('rep-total-bills').innerText = filtered.length;
+
+            document.getElementById('rep-print-company').innerText = appData.company.name;
+            document.getElementById('rep-print-date').innerText = new Date().toLocaleDateString();
+            document.getElementById('rep-print-type').innerText = type.replace('_', ' ');
+            document.getElementById('rep-print-sales').innerText = `₹${totalSales.toFixed(2)}`;
+            document.getElementById('rep-print-gst').innerText = `₹${totalGst.toFixed(2)}`;
+            document.getElementById('rep-print-count').innerText = filtered.length;
+        }
+
+        function downloadReportPDF() {
+            if (lastGeneratedReportBills.length === 0) return alert('Please generate a report first.');
+            window.print();
+        }
     </script>
 </body>
 </html>
